@@ -103,7 +103,7 @@ def enrichment_wrapper(pair):
 	return
 
 if __name__ == '__main__':
-	all_libs = ['CREEDS', 'ChEA_2016', 'ENCODE_TF_ChIP-seq_2015']
+	all_libs = ['CREEDS', 'ChEA_2016', 'ENCODE_TF_ChIP-seq_2015', 'ENCODE_2017']
 
 	os.chdir('libs')
 	#Get dataframes of each gmt library in all_libs

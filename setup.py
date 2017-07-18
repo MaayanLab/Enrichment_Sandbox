@@ -150,10 +150,10 @@ if __name__ == '__main__':
 
 	for fname in ('human_matrix.h5', 'mouse_matrix.h5'):
 		print('downloading', fname + ' . (This will take at least ten minutes.)')
-		#download_file('https://s3.amazonaws.com/mssm-seq-matrix/' + fname, fname)
+		download_file('https://s3.amazonaws.com/mssm-seq-matrix/' + fname, fname)
 
-	for gmt_file in ('ENCODE_TF_ChIP-seq_2015', 'ChEA_2016', 'CREEDS'):
-		#get_ARCHS4_correlation_matrices(gmt_file)
+	for gmt_file in ('ENCODE_TF_ChIP-seq_2015', 'ChEA_2016', 'CREEDS', 'ENCODE_2017'):
+		get_ARCHS4_correlation_matrices(gmt_file)
 		if gmt_file != 'CREEDS': convert_gmt('df', gmt_file)
 
 	os.chdir('..')
