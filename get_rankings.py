@@ -8,7 +8,7 @@ from setup import convert_gmt
 
 def clean(tf):
 	'''Input: a list or set of transcription factor names. Output: a set of the 'cleaned', i.e. simplified tf names.'''
-	return tf.partition('_')[0].partition(' ')[0].upper()
+	return str(tf).partition('_')[0].partition(' ')[0].upper()
 
 def get_overlaps(label_tfs, feature_tfs):
 	'''Input: list with feature_lib and label_lib names; list or set of feature library tf names; list or set of label library tf names.
