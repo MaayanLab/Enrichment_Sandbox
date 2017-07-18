@@ -109,6 +109,7 @@ if __name__ == '__main__':
 	#Get dataframes of each gmt library in all_libs
 	all_dfs = {x:convert_gmt('df', x) for x in all_libs}
 	os.chdir('..')
+	if not os.path.isdir('results'): os.mkdirs('results')
 	os.chdir('results')
 
 	#Iterate over each gmt pair.
