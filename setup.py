@@ -21,6 +21,13 @@ def convert_gmt(output_type, lib_name):
 		Name of the gmt file. This file must be in the current working directory. 
 	'''
 
+	#The first part of this list, ending at 'nan', comes from pandas.read_csv(na_values) documentation.
+		#From this list, 'NA' is removed because it is, in fact, a gene. 
+	#The second part of this list, beginning with '[NULL]', was added according to my own observations.
+	MY_NA_VALS = ('#N/A', '#N/A N/A', '#NA', '-1.#IND', '-1.#QNAN', '-NaN', 
+		'-nan', '1.#IND', '1.#QNAN', 'N/A', 'NULL', 'NaN', 'nan', 
+		'---', '[NULL]')
+
 	def to_df(reader, lib_name):
 		output_fname = lib_name + '_transformed.csv'
 		if os.path.isfile(output_fname): 
@@ -28,7 +35,7 @@ def convert_gmt(output_type, lib_name):
 			return pd.read_csv(output_fname, sep='\t', index_col=0)
 		df = pd.DataFrame(False, index = [''], columns = [''], dtype=bool)
 		for row in reader:
-			row = [str(x).replace(',1.0', '') for x in row]
+			row = [str(x).replace(',1.0', '') for x in row if x not in MY_NA_VALS]
 			s = pd.DataFrame(True, index = list(filter(None, row[2:])), columns = [row[0]], dtype=bool)
 			df = pd.concat([df,s], axis=1)
 		df.drop('', inplace=True)
@@ -40,7 +47,7 @@ def convert_gmt(output_type, lib_name):
 	def to_dict(reader, lib_name):
 		d = {}
 		for row in reader:
-			row = [str(x).replace(',1.0', '') for x in row]
+			row = [str(x).replace(',1.0', '') for x in row if x not in MY_NA_VALS]
 			d[row[0]] = set(filter(None, row[2:]))
 		d.pop('', None)
 		return d
