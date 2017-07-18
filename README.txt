@@ -1,8 +1,6 @@
-This is still very much a work in progress! 
+A brief guide:
 
-Briefly, to use:
-*run transform_CREEDS in /libs to create CREEDS_transformed.csv
-*download mouse_matrix.h5 and human_matrix.h5 from the ARCHS4 website and put in /libs. 
-*run ARCHS4_reader in /libs to create .h5 files for the gene correlation matrices
-*now in the main folder, run get_rankings.py
-*[does not work, but almost there] run evaluate_rankings.py to get the results
+*Run setup.py
+*Create a dicts with methods and parameters you would like to use in get_methods, which is in get_rankings.py
+*Run get_rankings.py
+*Run evaluate_rankings.py to receive the results
