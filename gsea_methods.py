@@ -66,7 +66,7 @@ def FisherAdjusted(l_tf_genes, f_matrix, l_lib, f_lib):
 		b = len(f_genes) - info.at['a',tf]
 		c = len(l_tf_genes) - info.at['a',tf]
 		d = 20000 - info.at['a',tf] - b - c
-		o, info.at['p', tf] = stats.fisher_exact([[a,b],[c,d]], alternative='greater')
+		info.at['p', tf] = max(1e-50,stats.fisher_exact([[a,b],[c,d]], alternative='greater')[1])
 
 		#Determine which organism this tf data came from. Doing this depends on the gmt file. 
 		if f_lib == 'CREEDS': organism = tf.partition(' GSE')[0].rpartition(' ')[2]
