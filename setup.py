@@ -35,7 +35,7 @@ def convert_gmt(output_type, lib_name):
 			return pd.read_csv(output_fname, sep='\t', index_col=0)
 		df = pd.DataFrame(False, index = [''], columns = [''], dtype=bool)
 		for row in reader:
-			row = [str(x).replace(',1.0', '') for x in row if x not in MY_NA_VALS]
+			row = [str(x).replace(',1.0', '') for x in row if str(x) not in MY_NA_VALS]
 			s = pd.DataFrame(True, index = list(filter(None, row[2:])), columns = [row[0]], dtype=bool)
 			df = pd.concat([df,s], axis=1)
 		df.drop('', inplace=True)
@@ -47,7 +47,7 @@ def convert_gmt(output_type, lib_name):
 	def to_dict(reader, lib_name):
 		d = {}
 		for row in reader:
-			row = [str(x).replace(',1.0', '') for x in row if x not in MY_NA_VALS]
+			row = [str(x).replace(',1.0', '') for x in row if str(x) not in MY_NA_VALS]
 			d[row[0]] = set(filter(None, row[2:]))
 		d.pop('', None)
 		return d
@@ -75,6 +75,7 @@ def combine_gmts(gmts, output_fname):
 	dicts = [convert_gmt('dict', x) for x in gmts]
 
 	#Combine the dicts into a single dict. Note: The libraries have the same tf factors.
+	print('processing the combined dict')
 	combined = {}
 	for k in dicts[0]: combined[k] = list(set(dicts[0][k]) | set(dicts[1][k]))
 
@@ -111,7 +112,7 @@ def get_ARCHS4_correlation_matrices(lib):
 	lib_genes = set(pd.read_csv(lib + '_transformed.csv', sep='\t', index_col=0).index)
 	#Create a correlation matrix for both human genes and mouse genes. 
 	for organism in ['human', 'mouse']:
-		#In case the file was already partially created.
+		#Check if the file was already partially created.
 		if organism in list(new_file[...]): continue
 
 		print(lib, organism)
@@ -160,7 +161,7 @@ if __name__ == '__main__':
 		download_file('https://s3.amazonaws.com/mssm-seq-matrix/' + fname, fname)
 
 	for gmt_file in ('ENCODE_TF_ChIP-seq_2015', 'ChEA_2016', 'CREEDS', 'ENCODE_2017'):
-		get_ARCHS4_correlation_matrices(gmt_file)
+		#get_ARCHS4_correlation_matrices(gmt_file)
 		if gmt_file != 'CREEDS': convert_gmt('df', gmt_file)
 
 	os.chdir('..')
