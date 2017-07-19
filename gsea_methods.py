@@ -33,9 +33,10 @@ def Fisher(l_tf_genes, f_matrix):
 	p.sort_values(ascending=True, inplace=True)
 	return list(p.index)
 
-def FisherAdjusted(l_tf_genes, f_matrix, l_lib, f_lib):
+def FisherAdjusted(l_tf_genes, f_matrix, l_lib, f_lib, ARCHS4_genes_dict):
 	'''Like Fisher(), but weighs p vals by gene correlation within the intersection cell of the contingency table,
 	Reward for high correlation. Also, weigh this reward by the degree of overlap with the ARCHS4 library.'''
+	
 	cwd = os.getcwd()
 	os.chdir('..')
 	os.chdir('libs')
@@ -43,37 +44,36 @@ def FisherAdjusted(l_tf_genes, f_matrix, l_lib, f_lib):
 	ARCHS4 = h5py.File(l_lib + '_ARCHS4_corr.h5', 'r+')
 	os.chdir('..')
 	os.chdir(cwd)
-	if f_lib == 'ENCODE': organism_dict = {'hg19': 'human', 'mm9': mouse}
+
 	#tfs within f_matrix will either be from human or mouse. So, store both gene lists in ARCHS4_genes_dict.
 	#Note that the /index/ contains the genes, and the /values/ contain the indices. 
 	#This is because we will need to access the indices from a list of genes. 
-	h_genes = ARCHS4['human']['meta']['genes']
-	ARCHS4_genes_dict = {'human': pd.Series(np.arange(len(h_genes)), index=h_genes[...])}
-	if f_lib != 'ENCODE_TF_ChIP-seq_2015':
-		m_genes = ARCHS4['mouse']['meta']['genes']
-		ARCHS4_genes_dict['mouse'] = pd.Series(np.arange(len(m_genes)), index=m_genes[...])
 
+	if f_lib == 'ENCODE_TF_ChIP-seq_2015': organism_dict = {'hg19': 'human', 'mm9': 'mouse'}
 	#For each tf, store the information collected in 'info' for use in the next iteration.
 	info = pd.DataFrame(index=['a', 'p', 'o_frac', 'r', 'p_adjusted'], columns = f_matrix.columns)
 	info.loc['o_frac',:] = 0
 	for tf in list(f_matrix.columns):
 		#Get the regular p val, just as we do in Fisher().
-		f_genes = set(f_matrix[f_matrix[column]].index)
+		f_genes = set(f_matrix.index[f_matrix[tf]])
 		#'a_genes' are the genes in both the feature library tf and the label library tf.
 		#In other words, 'a_genes' is the intersection cell of the 2x2 contingency table. 
 		a_genes = f_genes & l_tf_genes
 		a = len(a_genes)
 		info.at['a',tf] = a
-		b = len(f_genes) - info.at['a',tf]
-		c = len(l_tf_genes) - info.at['a',tf]
-		d = 20000 - info.at['a',tf] - b - c
+		b = len(f_genes) - a
+		c = len(l_tf_genes) - a
+		d = 20000 - a - b - c
 		info.at['p', tf] = max(1e-50,stats.fisher_exact([[a,b],[c,d]], alternative='greater')[1])
 
 		#Determine which organism this tf data came from. Doing this depends on the gmt file. 
 		if f_lib == 'CREEDS': organism = tf.partition(' GSE')[0].rpartition(' ')[2]
-		elif f_lib == 'ChEA_2016': organism = tf.rpartition('_')[2].lower()
-		elif f_lib == 'ENCODE_TF_ChIP-seq_2015': organism = organism_dict(tf.rpartition('_')[2].lower())
+		elif f_lib == 'ChEA_2016': 
+			organism = tf.rpartition('_')[2].lower()
+			if organism in ['ovary', 'hela', 'neurons', 'gbm']: organism = 'human'
+		elif f_lib == 'ENCODE_TF_ChIP-seq_2015': organism = organism_dict[tf.rpartition('_')[2].lower()]
 		else: print('invalid lib name!')
+		if organism == 'rat': organism = 'mouse'
 		if organism in ['human', 'mouse']:
 			#Use 'ARCHS4_genes_dict' to get the appropriate list of ARCHS4 genes
 			ARCHS4_genes = ARCHS4_genes_dict[organism]
@@ -103,9 +103,21 @@ def FisherAdjusted(l_tf_genes, f_matrix, l_lib, f_lib):
 
 	#Get the adjusted p val for each tf. Lower adjusted p vals are still considered more significant.
 	for tf in list(f_matrix.columns):
-		info.at['p_adjusted',tf] = math.log(info.at['p',tf]) * ((1/(1-info.at['r',tf])) ** info.at['o_frac',tf])
-	ordered_tfs = list(info.columns[info.loc['p_adjusted',:].argsort()])
-	return ordered_tfs
+		info.at['p_adjusted2',tf] = info.at['p',tf] + info.at['r',tf] * info.at['o_frac',tf] * info.at['p',tf]
+		info.at['p_adjusted3',tf] = info.at['p',tf] + info.at['r',tf] * info.at['o_frac',tf] * info.at['p',tf] / 10
+		info.at['p_adjusted4',tf] = math.log(info.at['p',tf]) * ((.2/(1-info.at['r',tf])) ** info.at['o_frac',tf])
+		info.at['p_adjusted5',tf] = math.log(info.at['p',tf]) * ((5/(1-info.at['r',tf])) ** info.at['o_frac',tf])
+		info.at['p_adjusted6',tf] = math.log(info.at['p',tf]) * (1/(1-info.at['r',tf]) ** (.2 * info.at['o_frac',tf]))
+		info.at['p_adjusted7',tf] = math.log(info.at['p',tf]) * (1/(1-info.at['r',tf]) ** (5 * info.at['o_frac',tf]))
+		info.at['p_adjusted8',tf] = math.log(info.at['p',tf]) * info.at['r',tf] * info.at['o_frac',tf]
+		info.at['p_adjusted9',tf] = info.at['p',tf] + info.at['r',tf] * info.at['o_frac',tf] / 100
+		info.at['p_adjusted10', tf] = info.at['p',tf] + (info.at['r',tf] * info.at['o_frac',tf])
+
+	return [list(info.columns[info.loc['p_adjusted2',:].argsort()]), 
+	list(info.columns[info.loc['p_adjusted3',:].argsort()]), list(info.columns[info.loc['p_adjusted4',:].argsort()]), 
+	list(info.columns[info.loc['p_adjusted5',:].argsort()]), list(info.columns[info.loc['p_adjusted6',:].argsort()]), 
+	list(info.columns[info.loc['p_adjusted7',:].argsort()]), list(info.columns[info.loc['p_adjusted8',:].argsort()]),
+	list(info.columns[info.loc['p_adjusted9',:].argsort()]), list(info.columns[info.loc['p_adjusted10',:].argsort()])]
 
 def ZAndCombined(l_tf_genes, f_lib, l_name, f_tfs):
 	'''Uses the Enrichr API to return two lists containing the Z score and Combined score rankings.

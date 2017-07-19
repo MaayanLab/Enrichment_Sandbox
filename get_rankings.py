@@ -5,6 +5,7 @@ import pandas as pd
 from joblib import Parallel, delayed
 import gsea_methods as m
 from setup import convert_gmt
+import h5py
 
 def clean(tf):
 	'''Input: a list or set of transcription factor names. Output: a set of the 'cleaned', i.e. simplified tf names.'''
@@ -32,10 +33,24 @@ def get_methods(l,f, l_name, f_name):
 	f_name: str
 		the name of f, for example "CREEDS"
 	'''
+	os.chdir('..')
+	os.chdir('libs')
+	#Get the correlation data
+	ARCHS4 = h5py.File(l_name + '_ARCHS4_corr.h5', 'r+')
+	os.chdir('..')
+	os.chdir('results')
+	h_genes = ARCHS4['human']['meta']['genes']
+	m_genes = ARCHS4['mouse']['meta']['genes']
+	ARCHS4_genes_dict = {'human': pd.Series(np.arange(len(h_genes)), index=h_genes[...]),
+		'mouse': pd.Series(np.arange(len(m_genes)), index=m_genes[...])}
+	ARCHS4.close()
+
 	df = pd.DataFrame(index=['func', 'params'])
 	df['Control'] = [m.Control, ([f.columns.values])]
 	df['Fisher'] = [m.Fisher, ([f])]
+	df['FAV'] = [m.FisherAdjusted, (f, l_name, f_name, ARCHS4_genes_dict)]
 	#df['RandomForest'] = [m.Forest, (f, f.columns.values, 73017, None, True, None, None)]
+
 	return df
 
 def enrichment_wrapper(pair, l_name, f_name):
@@ -58,6 +73,8 @@ def enrichment_wrapper(pair, l_name, f_name):
 		#Special case for ZAndCombined.
 		if m_name == 'ZAndCombined': 
 			output_fnames = (output_heading + '_Z.csv', output_heading + '_Combined.csv')
+		elif m_name == 'FAV':
+			output_fnames = [output_heading + '_FisherAdjusted' + str(x) + '.csv' for x in range(2,11)]
 		else: 
 			output_fnames = (output_heading + '_' + m_name + '.csv',)
 		#Check if the file has already been created
@@ -68,18 +85,21 @@ def enrichment_wrapper(pair, l_name, f_name):
 			#Iterate over each tf in the overlaps.
 			for l_tf in list(overlaps):
 				print(m_name, l_tf) #for diagnostics
-				l_tf_genes = set(pair['l'][pair['l'][l_tf]].index)
+				l_tf_genes = set(pair['l'].index[pair['l'][l_tf]])
 				result = method_params.at['func', m_name](l_tf_genes, *method_params.at['params', m_name])
 				if len(dfs) == 1: dfs[0][l_tf] = result
 				else: 
-					for x in range(len(dfs)): dfs[x][l_tf] = result[x]
-			#Send the results to the csv.
+					for x in range(len(dfs)): 
+						dfs[x][l_tf] = result[x]
+						#print(dfs[x][l_tf][33]) #for diagnostics
+						#Send the results to the csv.
 			for x in range(len(dfs)): dfs[x].to_csv(output_fnames[x], sep='\t')
 			print('done ' + m_name)
+
 	return
 
 if __name__ == '__main__':
-	all_libs = ['CREEDS', 'ENCODE_TF_ChIP-seq_2015', 'ENCODE_2017', 'ENCODE_2017_2']
+	all_libs = ['CREEDS', 'ENCODE_TF_ChIP-seq_2015', 'ChEA_2016']
 
 	os.chdir('libs')
 	#Get dataframes of each gmt library in all_libs
@@ -91,4 +111,4 @@ if __name__ == '__main__':
 	#Iterate over each gmt pair.
 	#lib_df_pairs = [{'l':all_dfs[a], 'f':all_dfs[b]} for a in all_dfs for b in all_dfs if a != b]
 	lib_df_pairs = [{'l':all_dfs[a], 'f':all_dfs['CREEDS']} for a in all_dfs if a != 'CREEDS']
-	Parallel(n_jobs=3, verbose=0)(delayed(enrichment_wrapper)(pair, pair['l'].index.name, pair['f'].index.name) for pair in lib_df_pairs)
+	Parallel(n_jobs=5, verbose=0)(delayed(enrichment_wrapper)(pair, pair['l'].index.name, pair['f'].index.name) for pair in lib_df_pairs)
