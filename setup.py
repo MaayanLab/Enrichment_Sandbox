@@ -4,6 +4,7 @@ import os
 import h5py
 import numpy as np
 import pandas as pd
+from joblib import Parallel, delayed 
 
 def file_exists(f_name):
 	'''Checks if a file exists in the directory, printing a statement if so.'''
@@ -23,22 +24,23 @@ def convert_gmt(output_type, lib_name):
 
 	#The first part of this list, ending at 'nan', comes from pandas.read_csv(na_values) documentation.
 		#From this list, 'NA' is removed because it is, in fact, a gene. 
-	#The second part of this list, beginning with '[NULL]', was added according to my own observations.
-	MY_NA_VALS = ('#N/A', '#N/A N/A', '#NA', '-1.#IND', '-1.#QNAN', '-NaN', 
-		'-nan', '1.#IND', '1.#QNAN', 'N/A', 'NULL', 'NaN', 'nan', 
-		'---', '[NULL]')
+	#The second part of this list, beginning with '---', was added according to my own observations.
+	MY_NA_VALS = {'', '#N/A', '#N/A N/A', '#NA', '-1.#IND', '-1.#QNAN',
+		'-NaN', '-nan', '1.#IND', '1.#QNAN', 'N/A', 'NULL', 'NaN', 'nan', 
+		'---', '[NULL]'}
 
 	def to_df(reader, lib_name):
 		output_fname = lib_name + '_transformed.csv'
-		if os.path.isfile(output_fname): 
-			print('using old df file for', output_fname)
-			return pd.read_csv(output_fname, sep='\t', index_col=0)
-		df = pd.DataFrame(False, index = [''], columns = [''], dtype=bool)
+
+		df = pd.DataFrame(dtype=bool)
 		for row in reader:
-			row = [str(x).replace(',1.0', '') for x in row if str(x) not in MY_NA_VALS]
-			s = pd.DataFrame(True, index = list(filter(None, row[2:])), columns = [row[0]], dtype=bool)
-			df = pd.concat([df,s], axis=1)
-		df.drop('', inplace=True)
+			tf = row[0]
+			print(tf)
+			if tf not in MY_NA_VALS:
+				#Remove delimiting string and do not accept null values
+				genes = [str(x).replace(',1.0', '') for x in row[2:] if x not in MY_NA_VALS]
+				s = pd.DataFrame(True, index = genes, columns = [tf], dtype=bool)
+				df = pd.concat([df,s], axis=1)
 		df.name = lib_name
 		df.to_csv(output_fname, sep='\t')
 		df = df.to_sparse()
@@ -47,18 +49,30 @@ def convert_gmt(output_type, lib_name):
 	def to_dict(reader, lib_name):
 		d = {}
 		for row in reader:
-			row = [str(x).replace(',1.0', '') for x in row if str(x) not in MY_NA_VALS]
-			d[row[0]] = set(filter(None, row[2:]))
-		d.pop('', None)
+			tf = row[0]
+			if tf not in MY_NA_VALS:
+				d[tf] = [str(x).replace(',1.0', '') for x in row[2:] if x not in MY_NA_VALS]
 		return d
 
-	print('converting', lib_name, 'to', output_type)
-	with open(lib_name + '.txt', 'r') as f:
+	#If you want the df, check to see if it has already been created. If so, simply load it and return it.
+	if output_type == 'df' and os.path.isfile(lib_name + '_transformed.csv'): 
+		print('will use old df file for', lib_name)
+		result = pd.read_csv(lib_name + '_transformed.csv', sep='\t', index_col=0, low_memory=False)
+		result.name = lib_name
+		return result.fillna(False)
+
+	#Else, get the gmt file...
+	print('getting', lib_name, 'as', output_type)
+	if os.path.isfile(lib_name + '.txt'): gmt_fname = lib_name + '.txt'
+	elif os.path.isfile(lib_name + '.gmt'): gmt_fname = lib_name + '.gmt'
+	else: raise ValueError('No .gmt or .txt file for', lib_name)
+
+	#And open it. Then, use either to_df or to_dict to get the data structure you want. 
+	with open(gmt_fname, 'r') as f:
 		reader = csv.reader(f, delimiter = '\t')
-		if output_type == 'df': result = to_df(reader, lib_name)
-		elif output_type == 'dict': result = to_dict(reader, lib_name)
+		if output_type == 'df': return to_df(reader, lib_name)
+		elif output_type == 'dict': return to_dict(reader, lib_name)
 		else: raise ValueError(output_type, 'must be either df or dict.')
-	return result
 
 def combine_gmts(gmts, output_fname):
 	'''
@@ -75,21 +89,14 @@ def combine_gmts(gmts, output_fname):
 	dicts = [convert_gmt('dict', x) for x in gmts]
 
 	#Combine the dicts into a single dict. Note: The libraries have the same tf factors.
-	print('processing the combined dict')
 	combined = {}
 	for k in dicts[0]: combined[k] = list(set(dicts[0][k]) | set(dicts[1][k]))
 
 	#Convert the dict to a dataframe, one key at a time.
-	df = pd.DataFrame(False, index = [''], columns = [''], dtype=bool)
+	df = pd.DataFrame(dtype=bool)
 	for k in combined:
 		s = pd.DataFrame(True, index = combined[k], columns = [k], dtype=bool)
 		df = pd.concat([df,s], axis=1)
-
-	#Once again, ensure no null values in data. Then, save to csv.
-	df = df[pd.notnull(df.index)]
-	df = df.loc[pd.notnull(df.index)]
-	df.drop('', inplace=True)
-	df.drop('', axis=1, inplace=True)
 	df.to_csv('CREEDS_transformed.csv', sep='\t')
 	return
 
@@ -112,7 +119,7 @@ def get_ARCHS4_correlation_matrices(lib):
 	lib_genes = set(pd.read_csv(lib + '_transformed.csv', sep='\t', index_col=0).index)
 	#Create a correlation matrix for both human genes and mouse genes. 
 	for organism in ['human', 'mouse']:
-		#Check if the file was already partially created.
+		#In case the file was already partially created.
 		if organism in list(new_file[...]): continue
 
 		print(lib, organism)
@@ -153,15 +160,12 @@ if __name__ == '__main__':
 
 	os.chdir('libs')
 
-	combine_gmts(['Single_Gene_Perturbations_from_GEO_down',
-		'Single_Gene_Perturbations_from_GEO_up'], 'CREEDS_transformed.csv')
+	combine_gmts(['Single_Gene_Perturbations_from_GEO_down', 'Single_Gene_Perturbations_from_GEO_up'], 'CREEDS_transformed.csv')
 
 	for fname in ('human_matrix.h5', 'mouse_matrix.h5'):
 		print('downloading', fname + ' . (This will take at least ten minutes.)')
 		download_file('https://s3.amazonaws.com/mssm-seq-matrix/' + fname, fname)
 
-	for gmt_file in ('ENCODE_TF_ChIP-seq_2015', 'ChEA_2016', 'CREEDS', 'ENCODE_2017'):
-		#get_ARCHS4_correlation_matrices(gmt_file)
-		if gmt_file != 'CREEDS': convert_gmt('df', gmt_file)
+	Parallel(n_jobs=3, verbose=0)(delayed(convert_gmt)('df', gmt_file) for gmt_file in ('ENCODE_TF_ChIP-seq_2015', 'ChEA_2016', 'ENCODE_2017'))
 
 	os.chdir('..')
