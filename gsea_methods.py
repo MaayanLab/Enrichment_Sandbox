@@ -23,11 +23,12 @@ def Fisher(l_tf_genes, f_matrix):
 	'''Return the tfs with ascending p vals as ranked by Fisher exact test with greater alternative.'''
 	p = pd.Series(index=f_matrix.columns)
 	for column in f_matrix:
-		f_tf_genes = set(f_matrix[f_matrix[column]].index)
+		f_tf_genes = set(f_matrix.index[f_matrix[column]])
 		a = len(f_tf_genes & l_tf_genes)
 		b = len(f_tf_genes) - a
 		c = len(l_tf_genes) - a
 		d = 20000 - a - b - c
+		#print(a,b,c,d) #diagnostics
 		o,p[column] =  stats.fisher_exact([[a,b],[c,d]], alternative='greater')
 	p.sort_values(ascending=True, inplace=True)
 	return list(p.index)
@@ -57,7 +58,7 @@ def FisherAdjusted(l_tf_genes, f_matrix, l_lib, f_lib):
 	info.loc['o_frac',:] = 0
 	for tf in list(f_matrix.columns):
 		#Get the regular p val, just as we do in Fisher().
-		f_genes = set(f_matrix[f_matrix[tf]].index)
+		f_genes = set(f_matrix[f_matrix[column]].index)
 		#'a_genes' are the genes in both the feature library tf and the label library tf.
 		#In other words, 'a_genes' is the intersection cell of the 2x2 contingency table. 
 		a_genes = f_genes & l_tf_genes

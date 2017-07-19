@@ -41,9 +41,9 @@ def convert_gmt(output_type, lib_name):
 				genes = [str(x).replace(',1.0', '') for x in row[2:] if x not in MY_NA_VALS]
 				s = pd.DataFrame(True, index = genes, columns = [tf], dtype=bool)
 				df = pd.concat([df,s], axis=1)
-		df.name = lib_name
+		df.index.name = lib_name
 		df.to_csv(output_fname, sep='\t')
-		df = df.to_sparse()
+		df = df.fillna(False).to_sparse()
 		return df
 
 	def to_dict(reader, lib_name):
@@ -58,8 +58,8 @@ def convert_gmt(output_type, lib_name):
 	if output_type == 'df' and os.path.isfile(lib_name + '_transformed.csv'): 
 		print('will use old df file for', lib_name)
 		result = pd.read_csv(lib_name + '_transformed.csv', sep='\t', index_col=0, low_memory=False)
-		result.name = lib_name
-		return result.fillna(False)
+		result.index.name = lib_name
+		return result.fillna(False).astype(bool)
 
 	#Else, get the gmt file...
 	print('getting', lib_name, 'as', output_type)
@@ -162,10 +162,10 @@ if __name__ == '__main__':
 
 	combine_gmts(['Single_Gene_Perturbations_from_GEO_down', 'Single_Gene_Perturbations_from_GEO_up'], 'CREEDS_transformed.csv')
 
-	for fname in ('human_matrix.h5', 'mouse_matrix.h5'):
-		print('downloading', fname + ' . (This will take at least ten minutes.)')
-		download_file('https://s3.amazonaws.com/mssm-seq-matrix/' + fname, fname)
+	#for fname in ('human_matrix.h5', 'mouse_matrix.h5'):
+		#print('downloading', fname + ' . (This will take at least ten minutes.)')
+		#download_file('https://s3.amazonaws.com/mssm-seq-matrix/' + fname, fname)
 
-	Parallel(n_jobs=3, verbose=0)(delayed(convert_gmt)('df', gmt_file) for gmt_file in ('ENCODE_TF_ChIP-seq_2015', 'ChEA_2016', 'ENCODE_2017'))
+	Parallel(n_jobs=3, verbose=0)(delayed(convert_gmt)('df', gmt_file) for gmt_file in ('ENCODE_2017_2', 'ENCODE_TF_ChIP-seq_2015', 'ChEA_2016', 'ENCODE_2017'))
 
 	os.chdir('..')

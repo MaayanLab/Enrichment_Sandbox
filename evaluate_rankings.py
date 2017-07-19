@@ -6,8 +6,9 @@ from get_rankings import clean
 from math import sqrt
 from sklearn.metrics import auc
 from joblib import Parallel, delayed
+from ast import literal_eval as make_tuple
 
-def plot_from_rankings(pair):
+def pairwise_plots(pair):
 
 	def get_ranks(l_name, f_name):
 		ranks = pd.read_csv(file, sep='\t', index_col=0)
@@ -22,15 +23,16 @@ def plot_from_rankings(pair):
 		for x in hit_ranks:
 			hits[x] += 1.000
 		coords = pd.Series(0.0, index=np.arange(ranks_range))
-		coords[0] = - (sqrt(G/N) * n_rankings) + (sqrt(N/G) * hits[0])
+		coords[0] = - (sqrt(G/N) * n_rankings) / (sqrt(N/G) * G) + (sqrt(N/G) * hits[0]) / (sqrt(N/G) * G)
 		for x in range(1, ranks_range):
-			coords[x] = coords[x - 1] - (sqrt(G/N) * n_rankings) + (sqrt(N/G) * hits[x])
+			coords[x] = coords[x - 1] - (sqrt(G/N) * n_rankings) / (sqrt(N/G) * G) + (sqrt(N/G) * hits[x]) / (sqrt(N/G) * G)
 		return coords.index.values, coords.values, hits, coords
 
 	prefix = 'from_' + pair['l'] + '_to_' + pair['f']
 	rank_fname = 'rankings_' + prefix + '.csv'
 	
-	if os.path.isfile(rank_fname): agg_c = pd.read_csv(rank_fname, sep='\t', index_col=0)
+	if os.path.isfile(rank_fname): 
+		agg_c = pd.read_csv(rank_fname, sep='\t', index_col=0)
 	else:
 		agg_r = pd.DataFrame()
 		for file in os.listdir(os.getcwd()):
@@ -50,15 +52,14 @@ def plot_from_rankings(pair):
 		agg_c.to_csv(rank_fname, sep='\t')
 
 	#bridge
-	plt.figure(3, figsize=(15,15))
+	plt.figure(3, figsize=(12,12))
 	font = {'size': 12}
 	plt.rc('font', **font)
 	for column in agg_c:
-		print(column)
-		if column[1] == 'x':
-			name = column[0] #+ '    ' + 'AUC: ' + str(int(auc(x,y)))
-			print(name)
-			plt.plot(agg_c[(name,'x')], agg_c[(name,'y')], label=name)
+		col = make_tuple(column)
+		if col[1] == 'x':
+			name = col[0] #+ '    ' + 'AUC: ' + str(int(auc(x,y)))
+			plt.plot(agg_c[str((name,'x'))], agg_c[str((name,'y'))], label=name)
 	plt.title(pair['l'] + ' to ' + pair['f'] + ' Bridge Plot')
 	plt.xlabel('Rank')
 	#plt.gca().set_xlim([0,50])
@@ -88,8 +89,33 @@ def plot_from_rankings(pair):
 
 	return
 
-all_libs = ['CREEDS', 'ChEA_2016', 'ENCODE_TF_ChIP-seq_2015', 'ENCODE_2017']
-lib_df_pairs = [{'l':a, 'f':b} for a in all_libs for b in all_libs if a != b]
-os.chdir('results')
+def combined_plot(lib_df_pairs):
 
-Parallel(n_jobs=1, verbose=0)(delayed(plot_from_rankings)(pair) for pair in lib_df_pairs)
+	plt.figure(3, figsize=(12,12))
+	font = {'size': 12}
+	plt.rc('font', **font)
+	for pair in lib_df_pairs:
+		prefix = 'from_' + pair['l'] + '_to_' + pair['f']
+		rank_fname = 'rankings_' + prefix + '.csv'
+		if os.path.isfile(rank_fname): 
+			agg_c = pd.read_csv(rank_fname, sep='\t', index_col=0)
+			for column in agg_c:
+				col = make_tuple(column)
+				if col[0] != 'Control' and col[1] == 'x':
+					name = col[0] #+ '    ' + 'AUC: ' + str(int(auc(x,y)))
+					x_vals = [a / len(agg_c[str((name,'x'))]) for a in agg_c[str((name,'x'))]]
+					plt.plot(x_vals, agg_c[str((name,'y'))], label=name + ' ' + prefix)
+	plt.title('Aggregated Bridge Plot')
+	plt.xlabel('Rank')
+	#plt.gca().set_xlim([0,.05])
+	plt.legend(bbox_to_anchor=(1, 1), prop={'size':10}, frameon=False)
+	plt.show()
+	return
+
+if __name__ == '__main__':
+	all_libs = ['CREEDS', 'ENCODE_TF_ChIP-seq_2015', 'ENCODE_2017', 'ENCODE_2017_2']
+	lib_df_pairs = [{'l':a, 'f':b} for a in all_libs for b in all_libs if a != b]
+	os.chdir('results')
+
+	Parallel(n_jobs=1, verbose=0)(delayed(pairwise_plots)(pair) for pair in lib_df_pairs)
+	combined_plot(lib_df_pairs)
