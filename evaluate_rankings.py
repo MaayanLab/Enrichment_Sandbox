@@ -50,41 +50,42 @@ def pairwise_plots(pair):
 			agg_c[column + ',y']=y
 	agg_c.to_csv(rank_fname, sep='\t')
 
-	#bridge
-	plt.figure(3, figsize=(12,12))
-	font = {'size': 12}
-	plt.rc('font', **font)
-	for column in agg_c:
-		col = (column.partition(',')[0], column.partition(',')[2])
-		if col[1] == 'x':
-			name = col[0] #+ '    ' + 'AUC: ' + str(int(auc(x,y)))
-			plt.plot(agg_c[name + ',x'], agg_c[name + ',y'], label=name)
-	plt.title(pair['l'] + ' to ' + pair['f'] + ' Bridge Plot')
-	plt.xlabel('Rank')
-	#plt.gca().set_xlim([0,50])
-	plt.legend(bbox_to_anchor=(1, 1), prop={'size':10}, frameon=False)
-	plt.show()
+	if not agg_c.empty:
+		#bridge
+		plt.figure(3, figsize=(12,12))
+		font = {'size': 12}
+		plt.rc('font', **font)
+		for column in agg_c:
+			col = (column.partition(',')[0], column.partition(',')[2])
+			if col[1] == 'x':
+				name = col[0] #+ '    ' + 'AUC: ' + str(int(auc(x,y)))
+				plt.plot(agg_c[name + ',x'], agg_c[name + ',y'], label=name)
+		plt.title(pair['l'] + ' to ' + pair['f'] + ' Bridge Plot')
+		plt.xlabel('Rank')
+		#plt.gca().set_xlim([0,50])
+		plt.legend(bbox_to_anchor=(1, 1), prop={'size':10}, frameon=False)
+		plt.show()
 
-	# #histogram DEPRECATED
-	# plt.figure(1)
-	# for column in agg_rs:
-	# 	x = agg_r[column]
-	# 	plt.hist(x, alpha=.5, bins=20, label=column)
-	# plt.title('histogram')
-	# plt.ylabel('rank')
-	# plt.legend()
-	# plt.show()
-	#agg_rs.plot.hist(alpha=.5, bins=20)
+		# #histogram DEPRECATED
+		# plt.figure(1)
+		# for column in agg_rs:
+		# 	x = agg_r[column]
+		# 	plt.hist(x, alpha=.5, bins=20, label=column)
+		# plt.title('histogram')
+		# plt.ylabel('rank')
+		# plt.legend()
+		# plt.show()
+		#agg_rs.plot.hist(alpha=.5, bins=20)
 
-	# #ecdf DEPRECATED
-	# plt.figure(2)
-	# for column in agg_r:
-	# 	x = agg_r[column]
-	# 	plt.hist(x, bins=20, normed=1, histtype='step', cumulative=True, label=column)
-	# plt.title('ecdf')
-	# plt.ylabel('rank')
-	# plt.legend(loc=4)
-	# plt.show()
+		# #ecdf DEPRECATED
+		# plt.figure(2)
+		# for column in agg_r:
+		# 	x = agg_r[column]
+		# 	plt.hist(x, bins=20, normed=1, histtype='step', cumulative=True, label=column)
+		# plt.title('ecdf')
+		# plt.ylabel('rank')
+		# plt.legend(loc=4)
+		# plt.show()
 
 	return
 
@@ -100,10 +101,12 @@ def combined_plot(lib_df_pairs):
 			agg_c = pd.read_csv(rank_fname, sep='\t', index_col=0)
 			for column in agg_c:
 				col = (column.partition(',')[0], column.partition(',')[2])
-				if col[0] != 'Control' and col[1] == 'x':
-					name = col[0] #+ '    ' + 'AUC: ' + str(int(auc(x,y)))
+				if col[0] == 'Fisher' and col[1] == 'x':
+					name = col[0] 
 					x_vals = [a / len(agg_c[name + ',x']) for a in agg_c[name + ',x']]
-					plt.plot(x_vals, agg_c[name + ',y'], label=name + ' ' + prefix)
+					y_vals = agg_c[name + ',y']
+					plt.plot(x_vals, y_vals, label=prefix 
+						+ '    ' + 'AUC: ' + str(np.round(auc(x_vals, y_vals), 4)))
 	plt.title('Aggregated Bridge Plot')
 	plt.xlabel('Rank')
 	#plt.gca().set_xlim([0,.05])
