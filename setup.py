@@ -166,6 +166,6 @@ if __name__ == '__main__':
 		#print('downloading', fname + ' . (This will take at least ten minutes.)')
 		#download_file('https://s3.amazonaws.com/mssm-seq-matrix/' + fname, fname)
 
-	Parallel(n_jobs=3, verbose=0)(delayed(convert_gmt)('df', gmt_file) for gmt_file in ('ENCODE_2017_2', 'ENCODE_TF_ChIP-seq_2015', 'ChEA_2016', 'ENCODE_2017'))
+	Parallel(n_jobs=3, verbose=0)(delayed(convert_gmt)('df',x) for x in ['ChEA_2016', 'ENCODE_TF_ChIP-seq_2015'])
 
 	os.chdir('..')

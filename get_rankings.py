@@ -46,8 +46,8 @@ def get_methods(l,f, l_name, f_name):
 	ARCHS4.close()
 
 	df = pd.DataFrame(index=['func', 'params'])
-	df['Control'] = [m.Control, ([f.columns.values])]
-	df['Fisher'] = [m.Fisher, ([f])]
+	#df['Control'] = [m.Control, ([f.columns.values])]
+	#df['Fisher'] = [m.Fisher, ([f])]
 	df['FAV'] = [m.FisherAdjusted, (f, l_name, f_name, ARCHS4_genes_dict)]
 	#df['RandomForest'] = [m.Forest, (f, f.columns.values, 73017, None, True, None, None)]
 
@@ -81,7 +81,7 @@ def enrichment_wrapper(pair, l_name, f_name):
 		if os.path.isfile(output_fnames[0]): print('ranking file already created for', m_name)
 		else:
 			#Use dataframes to store rankings from each tf iteration.
-			dfs = (pd.DataFrame(),) * len(output_fnames)
+			dfs = {x:pd.DataFrame() for x in range(2,11)}
 			#Iterate over each tf in the overlaps.
 			for l_tf in list(overlaps):
 				print(m_name, l_tf) #for diagnostics
@@ -89,13 +89,10 @@ def enrichment_wrapper(pair, l_name, f_name):
 				result = method_params.at['func', m_name](l_tf_genes, *method_params.at['params', m_name])
 				if len(dfs) == 1: dfs[0][l_tf] = result
 				else: 
-					for x in range(len(dfs)): 
-						dfs[x][l_tf] = result[x]
-						#print(dfs[x][l_tf][33]) #for diagnostics
+					for x in dfs: 
+						dfs[x][l_tf] = result[x-2]
 						#Send the results to the csv.
-			for x in range(len(dfs)): dfs[x].to_csv(output_fnames[x], sep='\t')
-			print('done ' + m_name)
-
+			for x in dfs: dfs[x].to_csv(output_fnames[x-2], sep='\t')
 	return
 
 if __name__ == '__main__':
@@ -109,6 +106,6 @@ if __name__ == '__main__':
 	os.chdir('results')
 
 	#Iterate over each gmt pair.
-	#lib_df_pairs = [{'l':all_dfs[a], 'f':all_dfs[b]} for a in all_dfs for b in all_dfs if a != b]
-	lib_df_pairs = [{'l':all_dfs[a], 'f':all_dfs['CREEDS']} for a in all_dfs if a != 'CREEDS']
-	Parallel(n_jobs=5, verbose=0)(delayed(enrichment_wrapper)(pair, pair['l'].index.name, pair['f'].index.name) for pair in lib_df_pairs)
+	#lib_df_pairs = [{'l':all_dfs[a], 'f':all_dfs[a]} for a in all_dfs if a != 'CREEDS']
+	lib_df_pairs = [{'l':all_dfs[a], 'f':all_dfs[b]} for a in all_dfs for b in all_dfs if a.partition('_')[0] != b.partition('_')[0]]
+	Parallel(n_jobs=6, verbose=0)(delayed(enrichment_wrapper)(pair, pair['l'].index.name, pair['f'].index.name) for pair in lib_df_pairs)

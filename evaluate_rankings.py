@@ -58,12 +58,15 @@ def pairwise_plots(pair):
 		for column in agg_c:
 			col = (column.partition(',')[0], column.partition(',')[2])
 			if col[1] == 'x':
-				name = col[0] #+ '    ' + 'AUC: ' + str(int(auc(x,y)))
-				plt.plot(agg_c[name + ',x'], agg_c[name + ',y'], label=name)
+				name = col[0] 
+				x_vals = [a / len(agg_c[name + ',x']) for a in agg_c[name + ',x']]
+				y_vals = agg_c[name + ',y']
+				plt.plot(agg_c[name + ',x'], agg_c[name + ',y'], label=name 
+						+ '    ' + 'AUC: ' + str(np.round(auc(x_vals, y_vals), 4)))
 		plt.title(pair['l'] + ' to ' + pair['f'] + ' Bridge Plot')
 		plt.xlabel('Rank')
-		#plt.gca().set_xlim([0,50])
-		plt.legend(bbox_to_anchor=(1, 1), prop={'size':10}, frameon=False)
+		plt.gca().set_xlim([0,10])
+		plt.legend(prop={'size':10}, frameon=False)
 		plt.show()
 
 		# #histogram DEPRECATED
@@ -110,7 +113,7 @@ def combined_plot(lib_df_pairs):
 	plt.title('Aggregated Bridge Plot')
 	plt.xlabel('Rank')
 	#plt.gca().set_xlim([0,.05])
-	plt.legend(bbox_to_anchor=(1, 1), prop={'size':10}, frameon=False)
+	plt.legend(prop={'size':10}, frameon=False)
 	plt.show()
 	return
 
@@ -119,4 +122,4 @@ if __name__ == '__main__':
 	lib_pairs = [{'l':a, 'f':b} for a in all_libs for b in all_libs if a != b]
 	os.chdir('results')
 	Parallel(n_jobs=1, verbose=0)(delayed(pairwise_plots)(pair) for pair in lib_pairs)
-	combined_plot(lib_pairs)
+	#combined_plot(lib_pairs)

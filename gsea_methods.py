@@ -92,7 +92,7 @@ def FisherAdjusted(l_tf_genes, f_matrix, l_lib, f_lib, ARCHS4_genes_dict):
 					#Now, get the average r value for non-diagonal i.e. pairwise entries. 
 					#(Each pair is duplicated across the diagonal, but this does not affect the result.)
 					info.at['r',tf] = min((np.sum(r_vals) - l_o)/(l_o*l_o-l_o),.95)
-		else: print('weird organism:', organism)
+		else: print('weird organism:', organism, tf)
 	ARCHS4.close()
 
 	#for tfs which did not have at least 2 genes in ARCHS4, set their 'r' val to the median. 
