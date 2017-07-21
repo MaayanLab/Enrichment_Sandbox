@@ -1,19 +1,19 @@
 # A brief guide:
 
 ## How to use:
-1. Run setup.py .
-2. get_rankings.py has a function called get_methods(). In here, create a pandas.DataFrame with function and parameters from enrichment_methods.py which you want to use. Then, run get_rankings.py .
-3. Run evaluate_rankings.py to plot the results.
+1. Run `setup.py` .
+2. `get_rankings.py` has a function called `get_methods()`. In here, create a `pandas.DataFrame` with function and parameters from `enrichment_methods.py` which you want to use. Then, run `get_rankings.py` .
+3. Run `evaluate_rankings.py` to plot the results.
 
 
 # More details:
 
 ## What happens behind the scenes, in pseudocode:
 
-1. setup.py
+1. **setup.py**
 * The gmt files are transformed into gene-vector format, and other necessary files are downloaded and processed.
 
-2. get_scores.py
+2. **get_scores.py**
 * For each ('label, 'feature') pair of gmt libraries:
 	* Get a list of experiments in the 'label' library whose corresponding transcription factor is also found in a 'feature' library experiment
 	* (From here on, this list will be referred to as the 'label' library transcription factors)
@@ -24,7 +24,7 @@
 		* The list of list of enrichment scores is stored as a matrix in a .csv file
 		* (Columns: label library tfs. Indices: feature library experiments. Cell values: scores given by the enrichment method.)
 
-3. evaluate_scores.py
+3. **evaluate_scores.py**
 * For each ('label, 'feature') pair of gmt libraries:
 	* The corresponding .csv files from get_scores.py are loaded
 	* For each corresponding .csv file (in other words, for each method):
@@ -34,16 +34,16 @@
 
 
 ## Naming conventions:
-* f: file
-* df: pandas.DataFrame
-* lib: gmt library
-* l: the 'label' gmt library
-* f: the 'feature' gmt library
-* experiment: The column values of the original gmt files. These could be transcription factors, perterbations, etc.
-* tf(s): Transcription factor(s). Note: for some gmt files, not all experiments correspond to a tf.
-* funct: function - specifically, an enrichment analysis function in gsea_methods.py
-* params: parameters for the function
-* method: a specific function & paramaters combination which is being evaluated
+* `f` : file
+* `df` : pandas.DataFrame
+* `lib` : gmt library
+* `l` : the 'label' gmt library
+* `f` : the 'feature' gmt library
+* `experiment` : The column values of the original gmt files. These could be transcription factors, perterbations, etc.
+* `tf(s)` : Transcription factor(s). Note: for some gmt files, not all experiments correspond to a tf.
+* `funct` : function - specifically, an enrichment analysis function in gsea_methods.py
+* `params` : parameters for the function
+* `method` : a specific function & paramaters combination which is being evaluated
 
 
 ## What is meant by 'label' and 'feature' library?:
