@@ -1,14 +1,14 @@
-===A brief guide:===
+#A brief guide:
 
-How to use:
+##How to use:
 1. Run setup.py .
 2. get_rankings.py has a function called get_methods(). In here, create a pandas.DataFrame with function and parameters from enrichment_methods.py which you want to use. Then, run get_rankings.py .
 3. Run evaluate_rankings.py to plot the results.
 
 
-===More details:===
+#More details:
 
-What happens behind the scenes, in pseudocode:
+##What happens behind the scenes, in pseudocode:
 
 1. setup.py
 *The gmt files are transformed into gene-vector format, and other necessary files are downloaded and processed.
@@ -33,7 +33,7 @@ What happens behind the scenes, in pseudocode:
 *Methods are grouped as desired (for example, by library or function), then plotted
 
 
-Naming conventions:
+##Naming conventions:
 *f: file
 *df: pandas.DataFrame
 *lib: gmt library
@@ -46,16 +46,16 @@ Naming conventions:
 *method: a specific function & paramaters combination which is being evaluated
 
 
-What is meant by 'label' and 'feature' library?:
+##What is meant by 'label' and 'feature' library?:
 The 'label library' is the library whose tf gene sets are being inputted for enrichment analysis.
 The 'feature library' is the library which is being used as the background for enrichment analysis.
 In other words, we take each tf from the label library, and perform enrichment with it using all of the feature library.
 (Think of ML notation: genes are the samples, and membership within each 'feature library' gene set are the features. We want to build a classifier which can label whether or not the gene belongs to the 'label library' tf gene set. From this classifier, we extract the feature importances to get the list of enriched 'feature library' tfs.)
 
 
-Justification for the benchmarking methodology:
+##Justification for the benchmarking methodology:
 Ideally, the experiments with the best scores will correspond to the same the tf which was used to perform enrichment - this is how we benchmark the different enrichment methods!
 
 
-Interpretation of the bridge plots:
+##Interpretation of the bridge plots:
 [In progress]
