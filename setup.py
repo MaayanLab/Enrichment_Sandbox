@@ -21,7 +21,6 @@ def convert_gmt(output_type, lib_name):
 	lib_name : str
 		Name of the gmt file. This file must be in the current working directory. 
 	'''
-
 	#The first part of this list, ending at 'nan', comes from pandas.read_csv(na_values) documentation.
 		#From this list, 'NA' is removed because it is, in fact, a gene. 
 	#The second part of this list, beginning with '---', was added according to my own observations.
@@ -82,7 +81,6 @@ def combine_gmts(gmts, output_fname):
 	output_fname: str
 		Name of the output file. 
 	'''
-
 	if file_exists(output_fname): return
 	print('creating', output_fname)
 
@@ -162,9 +160,9 @@ if __name__ == '__main__':
 
 	combine_gmts(['Single_Gene_Perturbations_from_GEO_down', 'Single_Gene_Perturbations_from_GEO_up'], 'CREEDS_transformed.csv')
 
-	#for fname in ('human_matrix.h5', 'mouse_matrix.h5'):
-		#print('downloading', fname + ' . (This will take at least ten minutes.)')
-		#download_file('https://s3.amazonaws.com/mssm-seq-matrix/' + fname, fname)
+	for fname in ('human_matrix.h5', 'mouse_matrix.h5'):
+		print('downloading', fname + ' . (This will take at least ten minutes.)')
+		download_file('https://s3.amazonaws.com/mssm-seq-matrix/' + fname, fname)
 
 	Parallel(n_jobs=3, verbose=0)(delayed(convert_gmt)('df',x) for x in ['ChEA_2016', 'ENCODE_TF_ChIP-seq_2015'])
 

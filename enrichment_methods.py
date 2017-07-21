@@ -15,23 +15,22 @@ import operator, time
 #Each method MUST have the FIRST argument be l_tf_genes, the genes in the label library tf. 
 #See enrichment_wrapper in get_rankings.py 
 
-def Control(l_tf_genes, f_matrix_cols):
+def Control(l_tf_genes, f_tfs):
 	'''Return the tfs in random order.'''
-	return random.sample(list(f_matrix_cols), len(f_matrix_cols))
+	return random.sample(range(len(f_tfs)), len(f_tfs))
 
 def Fisher(l_tf_genes, f_matrix):
 	'''Return the tfs with ascending p vals as ranked by Fisher exact test with greater alternative.'''
 	p = pd.Series(index=f_matrix.columns)
 	for column in f_matrix:
 		f_tf_genes = set(f_matrix.index[f_matrix[column]])
-		a = len(f_tf_genes & l_tf_genes)
+		a = len(f_tf_genes & set(l_tf_genes))
 		b = len(f_tf_genes) - a
 		c = len(l_tf_genes) - a
 		d = 20000 - a - b - c
 		#print(a,b,c,d) #diagnostics
 		o,p[column] =  stats.fisher_exact([[a,b],[c,d]], alternative='greater')
-	p.sort_values(ascending=True, inplace=True)
-	return list(p.index)
+	return(list(p))
 
 def FisherAdjusted(l_tf_genes, f_matrix, l_lib, f_lib, ARCHS4_genes_dict):
 	'''Like Fisher(), but weighs p vals by gene correlation within the intersection cell of the contingency table,
@@ -113,11 +112,8 @@ def FisherAdjusted(l_tf_genes, f_matrix, l_lib, f_lib, ARCHS4_genes_dict):
 		info.at['p_adjusted9',tf] = info.at['p',tf] + info.at['r',tf] * info.at['o_frac',tf] / 100
 		info.at['p_adjusted10', tf] = info.at['p',tf] + (info.at['r',tf] * info.at['o_frac',tf])
 
-	return [list(info.columns[info.loc['p_adjusted2',:].argsort()]), 
-	list(info.columns[info.loc['p_adjusted3',:].argsort()]), list(info.columns[info.loc['p_adjusted4',:].argsort()]), 
-	list(info.columns[info.loc['p_adjusted5',:].argsort()]), list(info.columns[info.loc['p_adjusted6',:].argsort()]), 
-	list(info.columns[info.loc['p_adjusted7',:].argsort()]), list(info.columns[info.loc['p_adjusted8',:].argsort()]),
-	list(info.columns[info.loc['p_adjusted9',:].argsort()]), list(info.columns[info.loc['p_adjusted10',:].argsort()])]
+	return [info.loc['p_adjusted2',:], info.loc['p_adjusted3',:], info.loc['p_adjusted4',:], info.loc['p_adjusted5',:], 
+		info.loc['p_adjusted6',:], info.loc['p_adjusted7',:], info.loc['p_adjusted8',:], info.loc['p_adjusted9',:], info.loc['p_adjusted10',:]]
 
 def ZAndCombined(l_tf_genes, f_lib, l_name, f_tfs):
 	'''Uses the Enrichr API to return two lists containing the Z score and Combined score rankings.
@@ -141,8 +137,9 @@ def ZAndCombined(l_tf_genes, f_lib, l_name, f_tfs):
 
 	#I believe Enrichr does not always return results for low-rankings feature tfs. 
 	#So, set all scores beforehand to an impossibly-low score, so that they are still returned in the rankings.
-	z_scores = {k:1000000 for k in f_tfs}
-	combined = {k:-1000000 for k in f_tfs}
+	z_scores = pd.Series(1000000, index=f_tfs)
+	combined = pd.Series(-100000, index=f_tfs)
+
 	if f_lib == 'CREEDS': libs = ['Single_Gene_Perturbations_from_GEO_up', 'Single_Gene_Perturbations_from_GEO_down']
 	else: libs = [f_lib]
 	for x in libs:
@@ -172,19 +169,14 @@ def ZAndCombined(l_tf_genes, f_lib, l_name, f_tfs):
 				z_scores[tf[1]] = min(z_scores[tf[1]], tf[3])
 				combined[tf[1]] = max(combined[tf[1]], tf[4])
 
-	sorted_z_scores = sorted(z_scores.items(), key=operator.itemgetter(1), reverse=False)
-	sorted_combined = sorted(combined.items(), key=operator.itemgetter(1), reverse=True)
-	return list(pd.DataFrame(sorted_z_scores)[0]), list(pd.DataFrame(sorted_combined)[0])
+	return list(z_scores), [-x for x in list(combined)]
 
 def Forest(l_tf_genes, train_group, features, random_state, max_features, bootstrap, class_weight, max_depth):
 	target = [str(x) in l_tf_genes for x in train_group.index.values]
 	clf = RandomForestClassifier(random_state = random_state, max_features=max_features, 
 		bootstrap = bootstrap, class_weight = class_weight, max_depth=max_depth)
 	clf.fit(train_group[features], target)
-	importances = clf.feature_importances_
-	rankings = pd.Series(importances, index=features)
-	rankings.sort_values(ascending=False, inplace=True)
-	return pd.Series(list(rankings.index))
+	return [-x for x in clf.feature_importances_]
 
 def ForestDrop(l_tf_genes, train_group, features, random_state, max_features, bootstrap, class_weight, max_depth):
 	f = list(features)
@@ -197,17 +189,13 @@ def ForestDrop(l_tf_genes, train_group, features, random_state, max_features, bo
                                 random_state, max_features, bootstrap, class_weight, max_depth)
 		top_features = this_iteration_ranks[0:n_to_drop]
 		for tf in top_features:
-			rankings[tf] = x
+			rankings[tf] = -1000000 + x
 			x += 1
 			f.remove(tf)
-	rankings.sort_values(ascending=True, inplace=True)
-	return pd.Series(list(rankings.index))
+	return rankings
 
 def ML_wrapper(l_tf_genes, method, train_group, features, random_state):
 	target = [str(x) in l_tf_genes for x in train_group.index.values]
 	clf = method(random_state = random_state)
 	clf.fit(train_group[features], target)
-	importances = clf.feature_importances_
-	rankings = pd.Series(importances, index=features)
-	rankings.sort_values(ascending=False, inplace=True)
-	return pd.Series(list(rankings.index))
+	return [-x for x in clf.feature_importances_]

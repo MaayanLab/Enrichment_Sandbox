@@ -6,94 +6,125 @@ from get_rankings import clean
 from math import sqrt
 from sklearn.metrics import auc
 from joblib import Parallel, delayed
+from collections import Counter
+
+def plot_curve(df, col, prefix):
+	'''
+	Plots a single curve.
+	(Helper function to pairwise_plots and combined_plot.)
+	df : pandas.DataFrame
+		Columns looks like this: ['Fisher,x', 'Fisher,y', 'Foo3,x', 'Foo3,y']
+	col : tuple
+		Contains the method name and axis for the column to plot, e.g. ('Fisher','x')
+	prefix : str
+		Prefix of the file for the column being plotted. Contains the name of the gmt libs. 
+	'''
+	name = col[0] 
+	#Scale the x_vals here
+	x_vals = [a/len(df[name + ',x']) for a in df[name + ',x']]
+	y_vals = df[name + ',y']
+	plt.plot(x_vals, y_vals, label=prefix + ' ' + name 
+		+ '    ' + 'AUC: ' + str(np.round(auc(x_vals, y_vals), 4)))
 
 def pairwise_plots(pair):
+	'''Plots a graph for the specified library pair.
+	pair : dict
+		Key 'l' contains the label library name, and key 'f' contains the feature library name. 
+	'''
 
-	def get_ranks(l_name, f_name):
-		ranks = pd.read_csv(file, sep='\t', index_col=0)
-		return [x for x in ranks.index for l_tf in ranks.columns if clean(l_tf) == clean(ranks.at[x, l_tf])], ranks.shape
+	def get_ranks(file):
+		'''Aggregates the ranks of feature lib experiments whose tfs match that which was used to rank it.'''
+		ranks_collection = []
+		scores = pd.read_csv(file, sep='\t', index_col=0)
+		#Recall that the index of scores will be the feature library experiments, and the column will be label library tfs. 
+		for column in scores: 
+			#Sort the feature library experiments by their scores
+			ordered_tfs = scores[column].sort_values().index
+			#Get the indices of the feature library experiments which match the label library tf.
+			these_ranks = [ordered_tfs.get_loc(x) for x in ordered_tfs if clean(x) == clean(column)]
+			ranks_collection += these_ranks
+		#Return scores.shape too, which will be needed to make the graph
+		#(scores.shape should be identical between the different methods)
+		return ranks_collection, scores.shape
 
 	def get_bridge_coords(hit_ranks, ranks_range, n_rankings):
+		'''Get the coordinates of the curve which will be plotted.
+		hit_ranks : list
+			Aggregated ranks of the feature lib experiments whose tfs match that which was used to rank it.
+		ranks_range : int
+			The number of feature library experiments, i.e. the range of possible ranks.
+		n_rankings : int
+			The number of label library tfs, i.e. the number of rankings that were created. 
+		'''
 		N = ranks_range * n_rankings
 		G = len(hit_ranks)
+		s = (sqrt(N/G) * G) #scale factor
 
-		hits = dict.fromkeys(range(0, ranks_range), 0.000)
-
-		for x in hit_ranks:
-			hits[x] += 1.000
-		coords = pd.Series(0.0, index=np.arange(ranks_range))
-		coords[0] = - (sqrt(G/N) * n_rankings) / (sqrt(N/G) * G) + (sqrt(N/G) * hits[0]) / (sqrt(N/G) * G)
+		hits = Counter(hit_ranks)
+		coords = pd.Series(0.0, index=range(ranks_range))
+		coords[0] = ( -(sqrt(G/N) * n_rankings) + (sqrt(N/G) * hits[0]) )/s
 		for x in range(1, ranks_range):
-			coords[x] = coords[x - 1] - (sqrt(G/N) * n_rankings) / (sqrt(N/G) * G) + (sqrt(N/G) * hits[x]) / (sqrt(N/G) * G)
+			coords[x] = coords[x - 1] ( -(sqrt(G/N) * n_rankings) + (sqrt(N/G) * hits[0]) )/s
 		return coords.index.values, coords.values, hits, coords
 
 	prefix = 'from_' + pair['l'] + '_to_' + pair['f']
 	rank_fname = 'rankings_' + prefix + '.csv'
 	
+	#Load saved plot coordinates, if any.
 	if os.path.isfile(rank_fname): agg_c = pd.read_csv(rank_fname, sep='\t', index_col=0)
 	else: agg_c = pd.DataFrame()
 
+	#Get the rankings from each enrichment method.
 	agg_r = pd.DataFrame()
 	for file in os.listdir(os.getcwd()):
 		if file.startswith(prefix):
+			#Get the enrichment method name.
 			m_name = str(file).partition(prefix + '_')[2].partition('.csv')[0]
+			#Skip if the results are already saved .
 			if str(m_name + ',x') in agg_c.columns.values: continue
-			r, r_shape = get_ranks(pair['l'], pair['f'])
-			print(m_name, r_shape)
+			#Get and store the ranking results.
+			r, r_shape = get_ranks(file)
+			print(m_name, '   ', len(r), 'hits', '   ', r_shape)
 			agg_r[m_name] = r
 
+	#If there were any new ranking files, we need to get and save their plot coordinates for later.
 	if not agg_r.empty:
 		ranks_range, n_rankings = r_shape[0], r_shape[1]
 		for column in agg_r:
+			#Get and store the plot coordinates.
 			x, y, hits, coords = get_bridge_coords(agg_r[column].values, ranks_range, n_rankings)
 			agg_c[column + ',x']=x
 			agg_c[column + ',y']=y
+	#Save the plot coordinate file.
 	agg_c.to_csv(rank_fname, sep='\t')
 
+	#Plot the results for all enrichment methods, if any.
 	if not agg_c.empty:
-		#bridge
+		#BRIDGE PLOT 
 		plt.figure(3, figsize=(12,12))
 		font = {'size': 12}
 		plt.rc('font', **font)
+		#Plot each enrichment method.
 		for column in agg_c:
 			col = (column.partition(',')[0], column.partition(',')[2])
 			if col[1] == 'x':
-				name = col[0] 
-				x_vals = [a / len(agg_c[name + ',x']) for a in agg_c[name + ',x']]
-				y_vals = agg_c[name + ',y']
-				plt.plot(agg_c[name + ',x'], agg_c[name + ',y'], label=name 
-						+ '    ' + 'AUC: ' + str(np.round(auc(x_vals, y_vals), 4)))
+				plot_curve(agg_c, col, prefix)
 		plt.title(pair['l'] + ' to ' + pair['f'] + ' Bridge Plot')
 		plt.xlabel('Rank')
-		plt.gca().set_xlim([0,10])
+		#Un-comment the line below to view only the first few ranks.
+		#plt.gca().set_xlim([0,10])
 		plt.legend(prop={'size':10}, frameon=False)
 		plt.show()
-
-		# #histogram DEPRECATED
-		# plt.figure(1)
-		# for column in agg_rs:
-		# 	x = agg_r[column]
-		# 	plt.hist(x, alpha=.5, bins=20, label=column)
-		# plt.title('histogram')
-		# plt.ylabel('rank')
-		# plt.legend()
-		# plt.show()
-		#agg_rs.plot.hist(alpha=.5, bins=20)
-
-		# #ecdf DEPRECATED
-		# plt.figure(2)
-		# for column in agg_r:
-		# 	x = agg_r[column]
-		# 	plt.hist(x, bins=20, normed=1, histtype='step', cumulative=True, label=column)
-		# plt.title('ecdf')
-		# plt.ylabel('rank')
-		# plt.legend(loc=4)
-		# plt.show()
 
 	return
 
 def combined_plot(lib_df_pairs):
-
+	'''
+	Plots a single graph for all results, across all libraries and methods.
+	(You can filter out which plots to view.)
+	lib_df_pairs : dict
+		keys are names of the gmt libraries; values are their dfs. 
+	'''
 	plt.figure(3, figsize=(12,12))
 	font = {'size': 12}
 	plt.rc('font', **font)
@@ -104,15 +135,12 @@ def combined_plot(lib_df_pairs):
 			agg_c = pd.read_csv(rank_fname, sep='\t', index_col=0)
 			for column in agg_c:
 				col = (column.partition(',')[0], column.partition(',')[2])
-				if col[0] == 'Fisher' and col[1] == 'x':
-					name = col[0] 
-					x_vals = [a / len(agg_c[name + ',x']) for a in agg_c[name + ',x']]
-					y_vals = agg_c[name + ',y']
-					plt.plot(x_vals, y_vals, label=prefix 
-						+ '    ' + 'AUC: ' + str(np.round(auc(x_vals, y_vals), 4)))
+				#Use the 'if' statement below to filter out which results you want to view.
+				if 'Fisher' in col[0] and col[1] == 'x':
+					plot_curve(agg_c, col, prefix)
 	plt.title('Aggregated Bridge Plot')
 	plt.xlabel('Rank')
-	#plt.gca().set_xlim([0,.05])
+	plt.gca().set_xlim([0,.5])
 	plt.legend(prop={'size':10}, frameon=False)
 	plt.show()
 	return
@@ -121,5 +149,5 @@ if __name__ == '__main__':
 	all_libs = ['CREEDS', 'ENCODE_TF_ChIP-seq_2015', 'ChEA_2016']
 	lib_pairs = [{'l':a, 'f':b} for a in all_libs for b in all_libs if a != b]
 	os.chdir('results')
-	Parallel(n_jobs=1, verbose=0)(delayed(pairwise_plots)(pair) for pair in lib_pairs)
-	#combined_plot(lib_pairs)
+	x = Parallel(n_jobs=1, verbose=0)(delayed(pairwise_plots)(pair) for pair in lib_pairs)
+	combined_plot(lib_pairs)
