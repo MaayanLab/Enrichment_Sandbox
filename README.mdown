@@ -1,6 +1,5 @@
 # A brief guide:
 
-### How to use:
 1. Run `setup.py` .
 2. `get_rankings.py` has a function called `get_methods()`. In here, create a `pandas.DataFrame` with function and parameters from `enrichment_methods.py` which you want to use. Then, run `get_rankings.py` .
 3. Run `evaluate_rankings.py` to plot the results.
@@ -10,10 +9,10 @@
 
 ### What happens behind the scenes, in pseudocode:
 
-1. **setup.py**
+1. **`setup.py`**
 * The gmt files are transformed into gene-vector format, and other necessary files are downloaded and processed.
 
-2. **get_scores.py**
+2. **`get_scores.py`**
 * For each `(label, feature)` pair of gmt libraries:
 	* Get a list of experiments in the label library whose corresponding transcription factor is also found in a feature library experiment
 	* (From here on, this list will be referred to as the label library transcription factors)
@@ -24,7 +23,7 @@
 		* The list of list of enrichment scores is stored as a matrix in a .csv file
 		* (Columns: label library tfs. Indices: feature library experiments. Cell values: scores given by the enrichment method.)
 
-3. **evaluate_scores.py**
+3. **`evaluate_scores.py`**
 * For each `(label, feature)` pair of gmt libraries:
 	* The corresponding `.csv` files from `get_scores.py` are loaded
 	* For each corresponding `.csv file` (in other words, for each method):
@@ -60,4 +59,12 @@ Ideally, the experiments with the best scores will correspond to the same the tf
 
 ### Construction and interpretation of the bridge plots:
 ![example result](example_result.png?raw=true)
-[In progress]
+*The ranks of the "matching" experiments are collected.
+*At every x-value, the y-value decreases at a constant rate.
+*At every x-value, the y value also increases proportionally to the number of "matching" ranks which occured at that x-value.
+*The decrease and increase constants are scaled such that they cancel out, and the curve ends at y=0.
+*The x-axis is scaled such that all the ranks are between one and zero.
+The y-axis is scaled such that the highest y-value possible (if all ranks occured at x=0) is one.
+*The result is a curve whose null-distribution is similar, but not identical, to a Brownian bridge. 
+
+A good ranking method will result in a curve with a large area underneath it (AUC), and with a tall supremum which occurs at a low x-value. (In the best possible outcome, where all ranks occur at x=0, the curve will be an isosceles right triangle with AUC = .5 and supremum of 1 at x=0.)
