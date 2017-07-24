@@ -108,7 +108,7 @@ def pairwise_plots(pair):
 		for column in agg_c:
 			col = (column.partition(',')[0], column.partition(',')[2])
 			if col[1] == 'x':
-				plot_curve(agg_c, col, prefix)
+				plot_curve(agg_c, col, '')
 		plt.title(pair['l'] + ' to ' + pair['f'] + ' Bridge Plot')
 		plt.xlabel('Rank')
 		#Un-comment the line below to view only the first few ranks.
