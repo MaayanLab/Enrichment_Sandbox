@@ -64,7 +64,7 @@ def pairwise_plots(pair):
 		coords = pd.Series(0.0, index=range(ranks_range))
 		coords[0] = ( -(sqrt(G/N) * n_rankings) + (sqrt(N/G) * hits[0]) )/s
 		for x in range(1, ranks_range):
-			coords[x] = coords[x - 1] + ( -(sqrt(G/N) * n_rankings) + (sqrt(N/G) * hits[0]) )/s
+			coords[x] = coords[x - 1] + ( -(sqrt(G/N) * n_rankings) + (sqrt(N/G) * hits[x]) )/s
 		return coords.index.values, coords.values, hits, coords
 
 	prefix = 'from_' + pair['l'] + '_to_' + pair['f']

@@ -54,13 +54,13 @@ def FisherAdjusted(l_tf_genes, f_matrix, l_lib, f_lib, ARCHS4_genes_dict):
 	info.loc['o_frac',:] = 0
 	for tf in list(f_matrix.columns):
 		#Get the regular p val, just as we do in Fisher().
-		f_genes = set(f_matrix.index[f_matrix[tf]])
+		f_tf_genes = set(f_matrix.index[f_matrix[tf]])
 		#'a_genes' are the genes in both the feature library tf and the label library tf.
 		#In other words, 'a_genes' is the intersection cell of the 2x2 contingency table. 
-		a_genes = f_genes & l_tf_genes
+		a_genes = f_tf_genes & set(l_tf_genes)
 		a = len(a_genes)
 		info.at['a',tf] = a
-		b = len(f_genes) - a
+		b = len(f_tf_genes) - a
 		c = len(l_tf_genes) - a
 		d = 20000 - a - b - c
 		info.at['p', tf] = max(1e-50,stats.fisher_exact([[a,b],[c,d]], alternative='greater')[1])
@@ -77,20 +77,24 @@ def FisherAdjusted(l_tf_genes, f_matrix, l_lib, f_lib, ARCHS4_genes_dict):
 			#Use 'ARCHS4_genes_dict' to get the appropriate list of ARCHS4 genes
 			ARCHS4_genes = ARCHS4_genes_dict[organism]
 			#'overlap' will contain a list of genes both in ARCHS4 and in the intersection cell.
-			overlap = {x.encode('utf-8') for x in a_genes} & set(ARCHS4_genes.index)
-			l_o = len(overlap)
+			b_overlap = {str(x).encode('utf-8') for x in f_tf_genes} & set(ARCHS4_genes.index)
+			c_overlap = {str(x).encode('utf-8') for x in l_tf_genes} & set(ARCHS4_genes.index)
+			b_l_o = len(b_overlap)
+			c_l_o = len(c_overlap)
+			l_o = len(b_overlap | c_overlap)
 			if l_o > 0: 
 				#'o_frac' is the proportion of genes in the intersection cell which are also in ARCHS4.
 				#Limit its value to < .95 to prevent an extreme effect when used in the adjustment formula. 
-				info.at['o_frac',tf] = min(l_o / a,.95)
-				if l_o > 1:
+				info.at['o_frac',tf] = min(l_o / (b+c),.95)
+				if len(b_overlap) > 0 and len(c_overlap) > 0:
 					#Get the indices of the overlapping genes, and use this to index the correlation matrix.
-					overlap_indices = sorted(ARCHS4_genes[overlap])
-					r_vals = ARCHS4[organism]['data']['correlation'][overlap_indices][:,overlap_indices]
+					b_overlap_indices = sorted(ARCHS4_genes[b_overlap])
+					c_overlap_indices = sorted(ARCHS4_genes[c_overlap])
+					r_vals = ARCHS4[organism]['data']['correlation'][b_overlap_indices][:,c_overlap_indices]
 					#r_vals is the correlation matrix for only the overlapping tfs. 
 					#Now, get the average r value for non-diagonal i.e. pairwise entries. 
 					#(Each pair is duplicated across the diagonal, but this does not affect the result.)
-					info.at['r',tf] = min((np.sum(r_vals) - l_o)/(l_o*l_o-l_o),.95)
+					info.at['r',tf] = min((np.sum(r_vals))/(b_l_o*c_l_o),.95)
 		else: print('weird organism:', organism, tf)
 	ARCHS4.close()
 
@@ -102,30 +106,23 @@ def FisherAdjusted(l_tf_genes, f_matrix, l_lib, f_lib, ARCHS4_genes_dict):
 
 	#Get the adjusted p val for each tf. Lower adjusted p vals are still considered more significant.
 	for tf in list(f_matrix.columns):
-		info.at['p_adjusted2',tf] = info.at['p',tf] + info.at['r',tf] * info.at['o_frac',tf] * info.at['p',tf]
-		info.at['p_adjusted3',tf] = info.at['p',tf] + info.at['r',tf] * info.at['o_frac',tf] * info.at['p',tf] / 10
-		info.at['p_adjusted4',tf] = math.log(info.at['p',tf]) * ((.2/(1-info.at['r',tf])) ** info.at['o_frac',tf])
-		info.at['p_adjusted5',tf] = math.log(info.at['p',tf]) * ((5/(1-info.at['r',tf])) ** info.at['o_frac',tf])
-		info.at['p_adjusted6',tf] = math.log(info.at['p',tf]) * (1/(1-info.at['r',tf]) ** (.2 * info.at['o_frac',tf]))
-		info.at['p_adjusted7',tf] = math.log(info.at['p',tf]) * (1/(1-info.at['r',tf]) ** (5 * info.at['o_frac',tf]))
-		info.at['p_adjusted8',tf] = math.log(info.at['p',tf]) * info.at['r',tf] * info.at['o_frac',tf]
-		info.at['p_adjusted9',tf] = info.at['p',tf] + info.at['r',tf] * info.at['o_frac',tf] / 100
-		info.at['p_adjusted10', tf] = info.at['p',tf] + (info.at['r',tf] * info.at['o_frac',tf])
+		info.at['p_adjusted1',tf] = math.log(info.at['p',tf]) * (1/(1-info.at['r',tf]) ** (5 * info.at['o_frac',tf]))
+		info.at['p_adjusted2',tf] = math.log(info.at['p',tf]) * (1/(1-info.at['r',tf]) ** (10 * info.at['o_frac',tf]))
+		info.at['p_adjusted3',tf] = math.log(info.at['p',tf]) - info.at['r',tf] ** (info.at['o_frac',tf])
+		info.at['p_adjusted4',tf] = math.log(info.at['p',tf]) * (1 + info.at['r',tf] ** (info.at['o_frac',tf]))
+		info.at['p_adjusted5',tf] = math.log(info.at['p',tf]) - (1/(1-info.at['r',tf])) ** (info.at['o_frac',tf])
 
-	return [info.loc['p_adjusted2',:], info.loc['p_adjusted3',:], info.loc['p_adjusted4',:], info.loc['p_adjusted5',:], 
-		info.loc['p_adjusted6',:], info.loc['p_adjusted7',:], info.loc['p_adjusted8',:], info.loc['p_adjusted9',:], info.loc['p_adjusted10',:]]
+	return info.loc['p_adjusted1',:], info.loc['p_adjusted2',:], info.loc['p_adjusted3',:], info.loc['p_adjusted4',:], info.loc['p_adjusted5',:]
 
-def ZAndCombined(l_tf_genes, f_lib, l_name, f_tfs):
+def ZAndCombined(l_tf_genes, f_lib, f_tfs):
 	'''Uses the Enrichr API to return two lists containing the Z score and Combined score rankings.
 	Note: results are not exactly the same: my ties are in different order.'''
 	def get_id(l_tf_genes):
 		'''Give Enrichr the list of genes in the label tf. Returns the user_list_id.'''
 		ENRICHR_URL_ID = 'http://amp.pharm.mssm.edu/Enrichr/addList'
 		genes_str = '\n'.join(l_tf_genes)
-		description = l_name
 		payload = {
 			'list': (None, genes_str),
-			'description': (None, l_name)
 		}
 
 		response = requests.post(ENRICHR_URL_ID, files=payload)
@@ -149,7 +146,6 @@ def ZAndCombined(l_tf_genes, f_lib, l_name, f_tfs):
 		gene_set_lib = x
 		user_list_id = get_id(l_tf_genes)
 		url = ENRICHR_URL + query_string % (user_list_id, gene_set_lib)
-		print(url)
 		time.sleep(1) #Delay needed, otherwise Enrichr returns an error
 
 		response = requests.get(url)
@@ -171,23 +167,21 @@ def ZAndCombined(l_tf_genes, f_lib, l_name, f_tfs):
 
 	return list(z_scores), [-x for x in list(combined)]
 
-def Forest(l_tf_genes, train_group, features, random_state, max_features, bootstrap, class_weight, max_depth):
+def Forest(l_tf_genes, train_group, features, random_state):
 	target = [str(x) in l_tf_genes for x in train_group.index.values]
-	clf = RandomForestClassifier(random_state = random_state, max_features=max_features, 
-		bootstrap = bootstrap, class_weight = class_weight, max_depth=max_depth)
+	clf = RandomForestClassifier(random_state = random_state)
 	clf.fit(train_group[features], target)
 	return [-x for x in clf.feature_importances_]
 
-def ForestDrop(l_tf_genes, train_group, features, random_state, max_features, bootstrap, class_weight, max_depth):
+def ForestDrop(l_tf_genes, train_group, features, random_state):
 	f = list(features)
 	rankings = pd.Series(index=features)
 	x = 0
 	while x < len(list(features)):
 		if x<50: n_to_drop = 1
 		else: n_to_drop = 300
-		this_iteration_ranks = Forest(l_tf_genes, train_group, f, 
-                                random_state, max_features, bootstrap, class_weight, max_depth)
-		top_features = this_iteration_ranks[0:n_to_drop]
+		this_iteration_ranks = pd.Series(Forest(l_tf_genes, train_group, f, random_state), index = f)
+		top_features = list(this_iteration_ranks.sort_values().index)[0:n_to_drop]
 		for tf in top_features:
 			rankings[tf] = -1000000 + x
 			x += 1

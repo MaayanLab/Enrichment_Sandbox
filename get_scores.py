@@ -5,6 +5,8 @@ import pandas as pd
 from joblib import Parallel, delayed
 import enrichment_methods as m
 from setup import convert_gmt
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, \
+	RandomTreesEmbedding, AdaBoostClassifier, ExtraTreesClassifier
 import h5py
 
 def clean(tf):
@@ -38,7 +40,9 @@ def get_methods_and_params(l,f, l_name, f_name):
 	f_name: str
 		the name of f, for example "CREEDS"
 	'''
+
 	#Get the ARCHS4 correlation data.
+	#This section is only necessary if FisherAdjusted is used.
 	os.chdir('..')
 	os.chdir('libs')
 	ARCHS4 = h5py.File(l_name + '_ARCHS4_corr.h5', 'r+')
@@ -51,13 +55,19 @@ def get_methods_and_params(l,f, l_name, f_name):
 	ARCHS4.close()
 
 	#(Define any other variables, as necessary, here.)
+	train_group = f
+	features = f.columns.values
 
 	#Create the output dataframe.
 	df = pd.DataFrame(index=['func', 'params'])
 	df['Control'] = [m.Control, ([f.columns.values])]
 	df['Fisher'] = [m.Fisher, ([f])]
-	#df['FAV'] = [m.FisherAdjusted, (f, l_name, f_name, ARCHS4_genes_dict)]
-	df['RandomForest'] = [m.Forest, (f, f.columns.values, 73017, None, True, None, None)]
+	df['FAV'] = [m.FisherAdjusted, (f, l_name, f_name, ARCHS4_genes_dict)]
+	df['ZAndCombined'] = [m.ZAndCombined, (f_name, f.columns.values)]
+	df['RandomForest'] = [m.Forest, (train_group, features, 73017)]
+	df['ForestDrop'] = [m.ForestDrop, (train_group, features, 73017)]
+	df['RandomTreesEmbedding'] = [m.ML_wrapper, (RandomTreesEmbedding, train_group, features, 73017)]
+	df['ExtraTreesClassifier'] = [m.ML_wrapper, (ExtraTreesClassifier, train_group, features, 73017)]
 
 	return df
 
@@ -84,7 +94,7 @@ def enrichment_wrapper(pair):
 		if mp.name == 'ZAndCombined': 
 			output_fnames = (output_heading + '_Z.csv', output_heading + '_Combined.csv')
 		elif mp.name == 'FAV':
-			output_fnames = [output_heading + '_FisherAdjusted' + str(x) + '.csv' for x in range(2,11)]
+			output_fnames = [output_heading + '_FisherAdjusted' + str(x) + '.csv' for x in range(1,6)]
 		else: 
 			output_fnames = (output_heading + '_' + mp.name + '.csv',)
 
