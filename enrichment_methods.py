@@ -175,7 +175,7 @@ def ML_wrapper(l_tf_genes, method, train_group, features, random_state):
 	return [-x for x in clf.feature_importances_]
 
 def ML_iterative(l_tf_genes, method, it, train_group, features, random_state):
-	#This is a wrapper for sklearn.ensemble methods, which chooses features recursively.
+	#This is a wrapper which recursively calls ML_wrapper.
 	f = list(features)
 	rankings = pd.Series(index=features)
 	x = 0

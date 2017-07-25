@@ -43,16 +43,16 @@ def get_methods_and_params(l,f, l_name, f_name):
 
 	#Get the ARCHS4 correlation data.
 	#This section is only necessary if FisherAdjusted is used.
-	os.chdir('..')
-	os.chdir('libs')
-	ARCHS4 = h5py.File(l_name + '_ARCHS4_corr.h5', 'r+')
-	os.chdir('..')
-	os.chdir('results')
-	h_genes = ARCHS4['human']['meta']['genes']
-	m_genes = ARCHS4['mouse']['meta']['genes']
-	ARCHS4_genes_dict = {'human': pd.Series(np.arange(len(h_genes)), index=h_genes[...]),
-		'mouse': pd.Series(np.arange(len(m_genes)), index=m_genes[...])}
-	ARCHS4.close()
+	# os.chdir('..')
+	# os.chdir('libs')
+	# ARCHS4 = h5py.File(l_name + '_ARCHS4_corr.h5', 'r+')
+	# os.chdir('..')
+	# os.chdir('results')
+	# h_genes = ARCHS4['human']['meta']['genes']
+	# m_genes = ARCHS4['mouse']['meta']['genes']
+	# ARCHS4_genes_dict = {'human': pd.Series(np.arange(len(h_genes)), index=h_genes[...]),
+	# 	'mouse': pd.Series(np.arange(len(m_genes)), index=m_genes[...])}
+	# ARCHS4.close()
 
 	#(Define any other variables, as necessary, here.)
 	train_group = f
@@ -62,12 +62,7 @@ def get_methods_and_params(l,f, l_name, f_name):
 	df = pd.DataFrame(index=['func', 'params'])
 	df['Control'] = [m.Control, ([f.columns.values])]
 	df['Fisher'] = [m.Fisher, ([f])]
-	df['FAV'] = [m.FisherAdjusted, (f, l_name, f_name, ARCHS4_genes_dict)]
-	df['ZAndCombined'] = [m.ZAndCombined, (f_name, f.columns.values)]
-	df['RandomForest'] = [m.Forest, (train_group, features, 73017)]
-	df['ForestDrop'] = [m.ForestDrop, (train_group, features, 73017)]
-	df['RandomTreesEmbedding'] = [m.ML_wrapper, (RandomTreesEmbedding, train_group, features, 73017)]
-	df['ExtraTreesClassifier'] = [m.ML_wrapper, (ExtraTreesClassifier, train_group, features, 73017)]
+	df['RandomForest'] = [m.ML_wrapper, (RandomForestClassifier, train_group, features, 73017)]
 
 	return df
 
@@ -123,16 +118,18 @@ def enrichment_wrapper(pair):
 	return
 
 if __name__ == '__main__':
-	all_libs = ['CREEDS', 'ENCODE_TF_ChIP-seq_2015', 'ChEA_2016']
+	creeds_libs = ['Single_Gene_Perturbations_from_GEO_up', 'Single_Gene_Perturbations_from_GEO_down']
+	other_libs = ['ENCODE_TF_ChIP-seq_2015', 'ChEA_2016']
+	my_libs = creeds_libs + other_libs
 
 	#Get dataframes of each gmt library in all_libs
 	os.chdir('libs')
-	all_dfs = {x:convert_gmt('df', x) for x in all_libs}
+	all_dfs = {x:convert_gmt('df', x) for x in my_libs}
 	os.chdir('..')
 	if not os.path.isdir('results'): os.makedirs('results')
 	os.chdir('results')
 
 	#Iterate over each gmt pair.
-	lib_df_pairs = [{'l':all_dfs[a], 'f':all_dfs[b]} for a in all_dfs for b in all_dfs if a.partition('_')[0] != b.partition('_')[0]]
+	lib_df_pairs = [{'l':all_dfs[a], 'f':all_dfs[b]} for a in creeds_libs for b in other_libs] + [{'l':all_dfs[a], 'f':all_dfs[b]} for a in other_libs for b in creeds_libs]
 
-	Parallel(n_jobs=6, verbose=0)(delayed(enrichment_wrapper)(pair)for pair in lib_df_pairs)
+	Parallel(n_jobs=4, verbose=0)(delayed(enrichment_wrapper)(pair)for pair in lib_df_pairs)

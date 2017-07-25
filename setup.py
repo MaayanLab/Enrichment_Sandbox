@@ -6,6 +6,10 @@ import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed 
 
+def open_csv(transformed_gmt_file):
+	return pd.read_csv(transformed_gmt_file, 
+		index_col=0, sep='\t', low_memory=False, keep_default_na=False)
+
 def file_exists(f_name):
 	'''Checks if a file exists in the directory, printing a statement if so.'''
 	if os.path.isfile(f_name):
@@ -56,7 +60,7 @@ def convert_gmt(output_type, lib_name):
 	#If you want the df, check to see if it has already been created. If so, simply load it and return it.
 	if output_type == 'df' and os.path.isfile(lib_name + '_transformed.csv'): 
 		print('will use old df file for', lib_name)
-		result = pd.read_csv(lib_name + '_transformed.csv', sep='\t', index_col=0, low_memory=False)
+		result = open_csv(lib_name + '_transformed.csv')
 		result.index.name = lib_name
 		return result.fillna(False).astype(bool)
 
@@ -114,7 +118,7 @@ def get_ARCHS4_correlation_matrices(lib):
 	new_fname = lib + '_ARCHS4_corr.h5'
 	#r+ instead of w in case the operation was interrupted before, and the file was already partially created. 
 	new_file = h5py.File(new_fname, 'r+')
-	lib_genes = set(pd.read_csv(lib + '_transformed.csv', sep='\t', index_col=0).index)
+	lib_genes = set(open_csv(lib + '_transformed.csv').index)
 	#Create a correlation matrix for both human genes and mouse genes. 
 	for organism in ['human', 'mouse']:
 		#In case the file was already partially created.
