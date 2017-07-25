@@ -35,11 +35,29 @@ def pairwise_plots(pair):
 	def get_ranks(file):
 		'''Aggregates the ranks of feature lib experiments whose tfs match that which was used to rank it.'''
 		ranks_collection = []
-		scores = pd.read_csv(file, sep='\t', index_col=0)
+		if 'Drug' in file: scores = pd.read_csv(file, sep='\t', index_col=0, encoding='cp1252')
+		else: scores = pd.read_csv(file, sep='\t', index_col=0)
 		#Recall that the index of scores will be the feature library experiments, and the column will be label library tfs. 
 		for column in scores: 
 			#Sort the feature library experiments by their scores
 			ordered_tfs = scores[column].sort_values().index
+			#Get the indices of the feature library experiments which match the label library tf.
+			these_ranks = [ordered_tfs.get_loc(x) for x in ordered_tfs if clean(x) == clean(column)]
+			ranks_collection += these_ranks
+		#Return scores.shape too, which will be needed to make the graph
+		#(scores.shape should be identical between the different methods)
+		return ranks_collection, scores.shape
+
+	def get_ranks_up_dn(up_file, dn_file):
+		'''Aggregates the ranks of feature lib experiments whose tfs match that which was used to rank it.'''
+		ranks_collection = []
+		up = pd.read_csv(up_file, sep='\t', index_col=0)
+		dn = pd.read_csv(dn_file, sep='\t', index_col=0)
+		#Recall that the index of scores will be the feature library experiments, and the column will be label library tfs. 
+		for column in up:
+			combined = pd.Series([min(up[column][x], dn[column][x]) for x in range(up.shape[0])], index=up.index) 
+			#Sort the feature library experiments by their scores
+			ordered_tfs = combined.sort_values().index
 			#Get the indices of the feature library experiments which match the label library tf.
 			these_ranks = [ordered_tfs.get_loc(x) for x in ordered_tfs if clean(x) == clean(column)]
 			ranks_collection += these_ranks
@@ -56,34 +74,37 @@ def pairwise_plots(pair):
 		n_rankings : int
 			The number of label library tfs, i.e. the number of rankings that were created. 
 		'''
-		N = ranks_range * n_rankings
-		G = len(hit_ranks)
-		s = (sqrt(N/G) * G) #scale factor
+		down_const = 1/ (ranks_range - 1)
+		vert_scale = len(hit_ranks)
 
 		hits = Counter(hit_ranks)
 		coords = pd.Series(0.0, index=range(ranks_range))
-		coords[0] = ( -(sqrt(G/N) * n_rankings) + (sqrt(N/G) * hits[0]) )/s
+		coords[0] = hits[0] / vert_scale
 		for x in range(1, ranks_range):
-			coords[x] = coords[x - 1] + ( -(sqrt(G/N) * n_rankings) + (sqrt(N/G) * hits[x]) )/s
+			coords[x] = coords[x - 1] + hits[x] / vert_scale - down_const
 		return coords.index.values, coords.values, hits, coords
 
 	prefix = 'from_' + pair['l'] + '_to_' + pair['f']
+	print(prefix)
 	rank_fname = 'rankings_' + prefix + '.csv'
 	
 	#Load saved plot coordinates, if any.
-	if os.path.isfile(rank_fname): agg_c = pd.read_csv(rank_fname, sep='\t', index_col=0)
-	else: agg_c = pd.DataFrame()
-
+	#if os.path.isfile(rank_fname): agg_c = pd.read_csv(rank_fname, sep='\t', index_col=0)
+	#else: agg_c = pd.DataFrame()
+	agg_c = pd.DataFrame()
 	#Get the rankings from each enrichment method.
 	agg_r = pd.DataFrame()
 	for file in os.listdir(os.getcwd()):
 		if file.startswith(prefix):
+			print('found', file)
 			#Get the enrichment method name.
 			m_name = str(file).partition(prefix + '_')[2].partition('.csv')[0]
 			#Skip if the results are already saved .
 			if str(m_name + ',x') in agg_c.columns.values: continue
 			#Get and store the ranking results.
-			r, r_shape = get_ranks(file)
+			if '_down' in prefix: continue
+			elif '_up' in prefix: r, r_shape = get_ranks_up_dn(file, file.replace('up','down'))
+			else: r, r_shape = get_ranks(file)
 			print(m_name, '   ', len(r), 'hits', '   ', r_shape)
 			agg_r[m_name] = r
 
@@ -101,19 +122,19 @@ def pairwise_plots(pair):
 	#Plot the results for all enrichment methods, if any.
 	if not agg_c.empty:
 		#BRIDGE PLOT 
-		plt.figure(3, figsize=(12,12))
-		font = {'size': 12}
+		plt.figure(3, figsize=(5.7,5))
+		font = {'size': 11}
 		plt.rc('font', **font)
 		#Plot each enrichment method.
 		for column in agg_c:
 			col = (column.partition(',')[0], column.partition(',')[2])
 			if col[1] == 'x':
 				plot_curve(agg_c, col, '')
-		plt.title(pair['l'] + ' to ' + pair['f'] + ' Bridge Plot')
+		plt.title('CREEDS Drug Perturbations' + ' to ' + 'DrugBank' + ' Bridge Plot')
 		plt.xlabel('Rank')
 		#Un-comment the line below to view only the first few ranks.
 		#plt.gca().set_xlim([0,10])
-		plt.legend(prop={'size':10}, frameon=False)
+		plt.legend(prop={'size':9}, frameon=False)
 		plt.show()
 
 	return

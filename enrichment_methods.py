@@ -174,15 +174,15 @@ def ML_wrapper(l_tf_genes, method, train_group, features, random_state):
 	clf.fit(train_group[features], target)
 	return [-x for x in clf.feature_importances_]
 
-def ML_iterative(l_tf_genes, method, train_group, features, random_state):
+def ML_iterative(l_tf_genes, method, it, train_group, features, random_state):
 	#This is a wrapper for sklearn.ensemble methods, which chooses features recursively.
 	f = list(features)
 	rankings = pd.Series(index=features)
 	x = 0
 	while x < len(list(features)):
-		if x<50: n_to_drop = 1
+		if x<50: n_to_drop = it
 		else: n_to_drop = 300
-		this_iteration_ranks = pd.Series(method(l_tf_genes, train_group, f, random_state), index = f)
+		this_iteration_ranks = pd.Series(ML_wrapper(l_tf_genes, method, train_group, f, random_state), index = f)
 		top_features = list(this_iteration_ranks.sort_values().index)[0:n_to_drop]
 		#Take the best features, then call the method again using all but the best features.
 		for tf in top_features:
