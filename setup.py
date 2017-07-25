@@ -37,7 +37,7 @@ def convert_gmt(output_type, lib_name):
 			print(tf)
 			if tf not in MY_NA_VALS:
 				#Remove delimiting string and do not accept null values
-				genes = [str(x).replace(',1.0', '') for x in row[2:] if x not in MY_NA_VALS]
+				genes = [str(x).replace(',1.0', '') for x in row[2:] if str(x).replace(',1.0', '') not in MY_NA_VALS]
 				s = pd.DataFrame(True, index = genes, columns = [tf], dtype=bool)
 				df = pd.concat([df,s], axis=1)
 		df.index.name = lib_name
@@ -158,12 +158,12 @@ if __name__ == '__main__':
 
 	os.chdir('libs')
 
-	combine_gmts(['Single_Gene_Perturbations_from_GEO_down', 'Single_Gene_Perturbations_from_GEO_up'], 'CREEDS_transformed.csv')
+	#combine_gmts(['Single_Gene_Perturbations_from_GEO_down', 'Single_Gene_Perturbations_from_GEO_up'], 'CREEDS_transformed.csv')
 
 	#This is only necessary if you plan to use the FisherAdjusted function as one of your methods.
-	for fname in ('human_matrix.h5', 'mouse_matrix.h5'):
-		print('downloading', fname + ' . (This will take at least ten minutes.)')
-		download_file('https://s3.amazonaws.com/mssm-seq-matrix/' + fname, fname)
+	#for fname in ('human_matrix.h5', 'mouse_matrix.h5'):
+	#	print('downloading', fname + ' . (This will take at least ten minutes.)')
+	#	download_file('https://s3.amazonaws.com/mssm-seq-matrix/' + fname, fname)
 
 	Parallel(n_jobs=2, verbose=0)(delayed(convert_gmt)('df',x) for x in ['ChEA_2016', 'ENCODE_TF_ChIP-seq_2015'])
 
