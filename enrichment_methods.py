@@ -167,29 +167,26 @@ def ZAndCombined(l_tf_genes, f_lib, f_tfs):
 
 	return list(z_scores), [-x for x in list(combined)]
 
-def Forest(l_tf_genes, train_group, features, random_state):
+def ML_wrapper(l_tf_genes, method, train_group, features, random_state):
+	#This is a wrapper for sklearn.ensemble methods.
 	target = [str(x) in l_tf_genes for x in train_group.index.values]
-	clf = RandomForestClassifier(random_state = random_state)
+	clf = method(random_state = random_state)
 	clf.fit(train_group[features], target)
 	return [-x for x in clf.feature_importances_]
 
-def ForestDrop(l_tf_genes, train_group, features, random_state):
+def ML_iterative(l_tf_genes, method, train_group, features, random_state):
+	#This is a wrapper for sklearn.ensemble methods, which chooses features recursively.
 	f = list(features)
 	rankings = pd.Series(index=features)
 	x = 0
 	while x < len(list(features)):
 		if x<50: n_to_drop = 1
 		else: n_to_drop = 300
-		this_iteration_ranks = pd.Series(Forest(l_tf_genes, train_group, f, random_state), index = f)
+		this_iteration_ranks = pd.Series(method(l_tf_genes, train_group, f, random_state), index = f)
 		top_features = list(this_iteration_ranks.sort_values().index)[0:n_to_drop]
+		#Take the best features, then call the method again using all but the best features.
 		for tf in top_features:
 			rankings[tf] = -1000000 + x
 			x += 1
 			f.remove(tf)
 	return rankings
-
-def ML_wrapper(l_tf_genes, method, train_group, features, random_state):
-	target = [str(x) in l_tf_genes for x in train_group.index.values]
-	clf = method(random_state = random_state)
-	clf.fit(train_group[features], target)
-	return [-x for x in clf.feature_importances_]
