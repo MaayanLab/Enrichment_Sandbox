@@ -1,11 +1,28 @@
-# A brief guide:
+The purpose of this project is to evaluate new methods for enrichment analysis. This is done by benchmarking the algorithms using either transcription factor-to-gene or drug-to-gene libraries. 
 
-1. Run `setup.py` .
-2. `get_rankings.py` has a function called `get_methods()`. In here, create a `pandas.DataFrame` with function and parameters from `enrichment_methods.py` which you want to use. Then, run `get_rankings.py` .
+The benchmarking process is as follows: Two libraries, A and B, are chosen. Terms which are in both libraries are identified. Then, the gene sets of those common terms from library A are used to perform enrichment into library B. (In the case of transcription factors, the terms are either transcription factor binding sites from ChIP-seq experiments, or single-gene perturbation signatures from Gene Expression Omnibus. In the case of drugs, the terms are either drug targets from DrugBank, or drug pertubration signatures from Gene Expression Omnibus.) For each common term in library A, the algorithm returns a ranking of all terms in library B, from most enriched to least enriched. The quality of the enrichment algorithm is then determined by how consistently it marks library B terms which are identical to the input library A term as "enriched." 
+
+Currently, the following methods are implemented:
+* A control
+* Fisher's exact test
+* An adjusted Fisher's exact test which uses gene-gene correlation data from ARCHS4
+* RandomForest, ExtraTrees, IsolationForest, GradientBoosting and AdaBoost from scikit-learn
+* Recursive variants of the above scikit-learn ensemble methods
+
+
+
+# How to Use:
+
+1. Run `setup.py`.
+2. `get_rankings.py` has a function called `get_methods()`. In here, fill a `pandas.DataFrame` with functions and parameters from `enrichment_methods.py` which you want to use. Then, run `get_rankings.py`.
 3. Run `evaluate_rankings.py` to plot the results.
 
 
+
 # More details:
+
+(Note: If drugs are being used, simply replace "transcription factor" with "drug" in all the following passages.)
+
 
 ### What happens behind the scenes, in pseudocode:
 
@@ -14,22 +31,23 @@
 
 2. **`get_scores.py`**
 * For each `(label, feature)` pair of gmt libraries:
-	* Get a list of experiments in the label library whose corresponding transcription factor is also found in a feature library experiment
+	* Get a list of experiments in the label library whose corresponding transcription factor is also found in at least one feature library experiment. 
 	* (From here on, this list will be referred to as the label library transcription factors)
 	* For each enrichment method:
 		* For each label library transcription factor:
-			* Perform enrichment by inputting this transcription factor's gene set into the whole feature library
-			* The output is a list of enrichment scores for each experiment in the feature library
-		* The list of list of enrichment scores is stored as a matrix in a .csv file
-		* (Columns: label library tfs. Indices: feature library experiments. Cell values: scores given by the enrichment method.)
+			* Perform enrichment by inputting this label library transcription factor's gene set into the whole feature library.
+			* The output is a list of enrichment scores for each experiment in the feature library.
+		* The list of list of enrichment scores is stored as a matrix in a .csv file.
+		* (Columns: label library transcription factors. Indices: feature library experiments. Cell values: scores given by the enrichment method.)
 
 3. **`evaluate_scores.py`**
 * For each `(label, feature)` pair of gmt libraries:
-	* The corresponding `.csv` files from `get_scores.py` are loaded
-	* For each corresponding `.csv file` (in other words, for each method):
-		* For each column (in other words, for each label library tf):
-			* The ranks for experiments which correspond to the same tf used to perform enrichment are aggregated.
-* Methods are grouped as desired (for example, by library or function), then plotted
+	* The corresponding `.csv` files from `get_scores.py` are loaded.
+	* For each corresponding `.csv file` (i.e., for each method):
+		* For each column (i.e., for each label library transcription factor):
+			* The ranks for experiments which correspond to the same transcription factor used to perform enrichment are aggregated.
+		* The coordinates of the bridge plot are generated.
+* Methods are grouped as desired (for example, by library or enrichment algorithm), then plotted.
 
 
 ### Naming conventions:
@@ -38,9 +56,9 @@
 * `lib` : gmt library
 * `l` : the "label" gmt library
 * `f` : the "feature" gmt library
-* `experiment` : The column values of the original gmt files. These could be transcription factors, perterbations, etc.
-* `tf(s)` : Transcription factor(s). Note: for some gmt files, not all experiments correspond to a tf.
-* `funct` : function - specifically, an enrichment analysis function in gsea_methods.py
+* `experiment` : The first column values of the original gmt files. These could be ChIP-seq experiments, single-gene perturbations, etc. 
+* `tf(s)` : Transcription factor(s). Note: for some gmt files, not all experiments correspond to a tf
+* `funct` : function - specifically, an enrichment analysis function in `gsea_methods.py`
 * `params` : parameters for the function
 * `method` : a specific function & paramaters combination which is being evaluated
 
@@ -52,19 +70,14 @@ In other words, we take each tf from the `label library`, and perform enrichment
 (Think of ML notation: genes are the samples, and membership within each `feature library` gene set are the features. We want to build a classifier which can label whether or not the gene belongs to the `label library` tf gene set. From this classifier, we extract the feature importances to get the list of enriched `feature library` tfs.)
 
 
-### Justification for the benchmarking methodology:
-Ideally, the experiments with the best scores will correspond to the same the tf which was used to perform enrichment. So a good ranking method will have these "matching" experiments highly ranked.
-
-
-
 ### Construction and interpretation of the bridge plots:
-![example result](example_result.png?raw=true)
+![Example result](example_result.png?raw=true)
 * The ranks of the "matching" experiments are collected.
 * At every x-value, the y-value decreases at a constant rate.
 * At every x-value, the y value also increases proportionally to the number of "matching" ranks which occured at that x-value.
 * The decrease and increase constants are scaled such that they cancel out, and the curve ends at y=0.
+* The y-axis is scaled such that the highest y-value possible (if all ranks occured at x=0) is one.
 * The x-axis is scaled such that all the ranks are between one and zero.
-The y-axis is scaled such that the highest y-value possible (if all ranks occured at x=0) is one.
 * The result is a curve whose null-distribution is similar, but not identical, to a Brownian bridge. 
 
-A good ranking method will result in a curve with a large area underneath it (AUC), and with a tall supremum which occurs at a low x-value. (In the best possible outcome, where all ranks occur at x=0, the curve will be an isosceles right triangle with AUC=.5 and supremum of 1 at x=0.)
+A good ranking method will result in a curve with a large area underneath it (AUC), and with a tall supremum occuring at a low x-value. (In the best possible outcome, where all ranks occur at x=0, the curve will be an isosceles right triangle with AUC=.5 and supremum of 1 at x=0.)
