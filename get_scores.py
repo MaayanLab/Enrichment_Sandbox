@@ -60,9 +60,14 @@ def get_methods_and_params(l,f, l_name, f_name):
 
 	#Create the output dataframe.
 	df = pd.DataFrame(index=['func', 'params'])
-	df['Control'] = [m.Control, ([f.columns.values])]
-	df['Fisher'] = [m.Fisher, ([f])]
-	df['RandomForest'] = [m.ML_wrapper, (RandomForestClassifier, train_group, features, 73017)]
+	#df['Control'] = [m.Control, ([f.columns.values])]
+	#df['Fisher'] = [m.Fisher, ([f])]
+	df['FAV'] = [m.FisherAdjusted, (f, l_name, f_name, ARCHS4_genes_dict)]
+	#df['ZAndCombined'] = [m.ZAndCombined, (f_name, f.columns.values)]
+	#df['RandomForest'] = [m.Forest, (train_group, features, 73017)]
+	#df['ForestDrop'] = [m.ML_iterative, (RandomForestClassifier, train_group, features, 73017)]
+	df['RandomTreesEmbedding'] = [m.ML_wrapper, (RandomTreesEmbedding, train_group, features, 73017)]
+	df['ExtraTreesClassifier'] = [m.ML_wrapper, (ExtraTreesClassifier, train_group, features, 73017)]
 
 	return df
 
@@ -89,7 +94,7 @@ def enrichment_wrapper(pair):
 		if mp.name == 'ZAndCombined': 
 			output_fnames = (output_heading + '_Z.csv', output_heading + '_Combined.csv')
 		elif mp.name == 'FAV':
-			output_fnames = [output_heading + '_FisherAdjusted' + str(x) + '.csv' for x in range(1,6)]
+			output_fnames = [output_heading + '_FisherAdjusted' + str(x) + '.csv' for x in range(1,11)]
 		else: 
 			output_fnames = (output_heading + '_' + mp.name + '.csv',)
 
@@ -99,7 +104,7 @@ def enrichment_wrapper(pair):
 		#If not, create it. 
 		else:
 			#Use dataframes to store results after each tf iteration.
-			dfs = [pd.DataFrame()] * len(output_fnames)
+			dfs = [pd.DataFrame() for n in range(len(output_fnames))]
 			#Iterate over each tf in the overlaps.
 			for l_tf in overlaps:
 				print(mp.name, l_tf) #for diagnostics

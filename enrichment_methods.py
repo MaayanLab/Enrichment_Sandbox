@@ -48,18 +48,22 @@ def FisherAdjusted(l_tf_genes, f_matrix, l_lib, f_lib, ARCHS4_genes_dict):
 	#Note that the /index/ contains the genes, and the /values/ contain the indices. 
 	#This is because we will need to access the indices from a list of genes. 
 
+	l_tf_genes = set(l_tf_genes)
+	c_overlap_dict = {'human':{str(x).encode('utf-8') for x in l_tf_genes} & set(ARCHS4_genes_dict['human'].index),
+		'mouse':{str(x).encode('utf-8') for x in l_tf_genes} & set(ARCHS4_genes_dict['mouse'].index)}
+
 	if f_lib == 'ENCODE_TF_ChIP-seq_2015': organism_dict = {'hg19': 'human', 'mm9': 'mouse'}
 	#For each tf, store the information collected in 'info' for use in the next iteration.
-	info = pd.DataFrame(index=['a', 'p', 'o_frac', 'r', 'p_adjusted'], columns = f_matrix.columns)
+	info = pd.DataFrame(index=['p', 'o_frac', 'o_frac2', 'r', 'r2'], columns = f_matrix.columns)
 	info.loc['o_frac',:] = 0
+	info.loc['o_frac2',:] = 0
 	for tf in list(f_matrix.columns):
 		#Get the regular p val, just as we do in Fisher().
 		f_tf_genes = set(f_matrix.index[f_matrix[tf]])
 		#'a_genes' are the genes in both the feature library tf and the label library tf.
 		#In other words, 'a_genes' is the intersection cell of the 2x2 contingency table. 
-		a_genes = f_tf_genes & set(l_tf_genes)
+		a_genes = f_tf_genes & l_tf_genes
 		a = len(a_genes)
-		info.at['a',tf] = a
 		b = len(f_tf_genes) - a
 		c = len(l_tf_genes) - a
 		d = 20000 - a - b - c
@@ -78,9 +82,13 @@ def FisherAdjusted(l_tf_genes, f_matrix, l_lib, f_lib, ARCHS4_genes_dict):
 			ARCHS4_genes = ARCHS4_genes_dict[organism]
 			#'overlap' will contain a list of genes both in ARCHS4 and in the intersection cell.
 			b_overlap = {str(x).encode('utf-8') for x in f_tf_genes} & set(ARCHS4_genes.index)
-			c_overlap = {str(x).encode('utf-8') for x in l_tf_genes} & set(ARCHS4_genes.index)
+			c_overlap = c_overlap_dict[organism]
+			a_overlap = b_overlap & c_overlap
+
+			a_l_o = len(a_overlap)
 			b_l_o = len(b_overlap)
 			c_l_o = len(c_overlap)
+
 			l_o = len(b_overlap | c_overlap)
 			if l_o > 0: 
 				#'o_frac' is the proportion of genes in the intersection cell which are also in ARCHS4.
@@ -94,7 +102,14 @@ def FisherAdjusted(l_tf_genes, f_matrix, l_lib, f_lib, ARCHS4_genes_dict):
 					#r_vals is the correlation matrix for only the overlapping tfs. 
 					#Now, get the average r value for non-diagonal i.e. pairwise entries. 
 					#(Each pair is duplicated across the diagonal, but this does not affect the result.)
-					info.at['r',tf] = min((np.sum(r_vals))/(b_l_o*c_l_o),.95)
+					info.at['r',tf] = min((np.sum(r_vals) - a_l_o)/(b_l_o*c_l_o - a_l_o),.95)
+
+					if len(a_overlap) > 1:
+						info.at['o_frac2',tf] = min(a_l_o / (a),.95)
+						a_overlap_indices = sorted(ARCHS4_genes[a_overlap])
+						r_vals = ARCHS4[organism]['data']['correlation'][a_overlap_indices][:,a_overlap_indices]
+						info.at['r2',tf] = min((np.sum(r_vals) - a_l_o)/(a_l_o*a_l_o - a_l_o),.95)
+
 		else: print('weird organism:', organism, tf)
 	ARCHS4.close()
 
@@ -104,6 +119,10 @@ def FisherAdjusted(l_tf_genes, f_matrix, l_lib, f_lib, ARCHS4_genes_dict):
 	if pd.isnull(r_grand_median): r_grand_median = 0
 	info.loc['r',:].fillna(r_grand_median, inplace=True)
 
+	r_grand_median = info.loc['r2',:].median()
+	if pd.isnull(r_grand_median): r_grand_median = 0
+	info.loc['r2',:].fillna(r_grand_median, inplace=True)
+
 	#Get the adjusted p val for each tf. Lower adjusted p vals are still considered more significant.
 	for tf in list(f_matrix.columns):
 		info.at['p_adjusted1',tf] = math.log(info.at['p',tf]) * (1/(1-info.at['r',tf]) ** (5 * info.at['o_frac',tf]))
@@ -111,8 +130,13 @@ def FisherAdjusted(l_tf_genes, f_matrix, l_lib, f_lib, ARCHS4_genes_dict):
 		info.at['p_adjusted3',tf] = math.log(info.at['p',tf]) - info.at['r',tf] ** (info.at['o_frac',tf])
 		info.at['p_adjusted4',tf] = math.log(info.at['p',tf]) * (1 + info.at['r',tf] ** (info.at['o_frac',tf]))
 		info.at['p_adjusted5',tf] = math.log(info.at['p',tf]) - (1/(1-info.at['r',tf])) ** (info.at['o_frac',tf])
-
-	return info.loc['p_adjusted1',:], info.loc['p_adjusted2',:], info.loc['p_adjusted3',:], info.loc['p_adjusted4',:], info.loc['p_adjusted5',:]
+		info.at['p_adjusted6',tf] = math.log(info.at['p',tf]) * (1/(1-info.at['r2',tf]) ** (5 * info.at['o_frac2',tf]))
+		info.at['p_adjusted7',tf] = math.log(info.at['p',tf]) * (1/(1-info.at['r2',tf]) ** (10 * info.at['o_frac2',tf]))
+		info.at['p_adjusted8',tf] = math.log(info.at['p',tf]) - info.at['r2',tf] ** (info.at['o_frac2',tf])
+		info.at['p_adjusted9',tf] = math.log(info.at['p',tf]) * (1 + info.at['r2',tf] ** (info.at['o_frac2',tf]))
+		info.at['p_adjusted10',tf] = math.log(info.at['p',tf]) - (1/(1-info.at['r2',tf])) ** (info.at['o_frac2',tf])
+	return [info.loc['p_adjusted1',:], info.loc['p_adjusted2',:], info.loc['p_adjusted3',:], info.loc['p_adjusted4',:], info.loc['p_adjusted5',:], 
+	info.loc['p_adjusted6',:], info.loc['p_adjusted7',:], info.loc['p_adjusted8',:], info.loc['p_adjusted9',:], info.loc['p_adjusted10',:]]
 
 def ZAndCombined(l_tf_genes, f_lib, f_tfs):
 	'''Uses the Enrichr API to return two lists containing the Z score and Combined score rankings.
@@ -175,7 +199,7 @@ def ML_wrapper(l_tf_genes, method, train_group, features, random_state):
 	return [-x for x in clf.feature_importances_]
 
 def ML_iterative(l_tf_genes, method, it, train_group, features, random_state):
-	#This is a wrapper which recursively calls ML_wrapper.
+	#This is a wrapper for sklearn.ensemble methods, which chooses features recursively.
 	f = list(features)
 	rankings = pd.Series(index=features)
 	x = 0
