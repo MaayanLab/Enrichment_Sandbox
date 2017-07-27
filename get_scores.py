@@ -62,12 +62,16 @@ def get_methods_and_params(l,f, l_name, f_name):
 	df = pd.DataFrame(index=['func', 'params'])
 	#df['Control'] = [m.Control, ([f.columns.values])]
 	#df['Fisher'] = [m.Fisher, ([f])]
-	df['FAV'] = [m.FisherAdjusted, (f, l_name, f_name, ARCHS4_genes_dict)]
+	#df['FAV'] = [m.FisherAdjusted, (f, l_name, f_name, ARCHS4_genes_dict)]
 	#df['ZAndCombined'] = [m.ZAndCombined, (f_name, f.columns.values)]
 	#df['RandomForest'] = [m.Forest, (train_group, features, 73017)]
 	#df['ForestDrop'] = [m.ML_iterative, (RandomForestClassifier, train_group, features, 73017)]
-	df['RandomTreesEmbedding'] = [m.ML_wrapper, (RandomTreesEmbedding, train_group, features, 73017)]
-	df['ExtraTreesClassifier'] = [m.ML_wrapper, (ExtraTreesClassifier, train_group, features, 73017)]
+	#df['RandomTreesEmbedding'] = [m.ML_wrapper, (RandomTreesEmbedding, train_group, features, 73017)]
+	#df['ExtraTreesClassifier'] = [m.ML_wrapper, (ExtraTreesClassifier, train_group, features, 73017)]
+	df['ForestFisherCutoff.10'] = [m.ML_fisher_cutoff, (RandomForestClassifier, .10, train_group, features, 73017)]
+	df['ForestFisherCutoff.25'] = [m.ML_fisher_cutoff, (RandomForestClassifier, .25, train_group, features, 73017)]
+	df['ForestFisherCutoff.5'] = [m.ML_fisher_cutoff, (RandomForestClassifier, .50, train_group, features, 73017)]
+	df['ForestFisherCutoff.05'] = [m.ML_fisher_cutoff, (RandomForestClassifier, .05, train_group, features, 73017)]
 
 	return df
 
@@ -123,18 +127,15 @@ def enrichment_wrapper(pair):
 	return
 
 if __name__ == '__main__':
-	creeds_libs = ['Single_Gene_Perturbations_from_GEO_up', 'Single_Gene_Perturbations_from_GEO_down']
-	other_libs = ['ENCODE_TF_ChIP-seq_2015', 'ChEA_2016']
-	my_libs = creeds_libs + other_libs
+	all_libs = ['CREEDS', 'ENCODE_TF_ChIP-seq_2015', 'ChEA_2016']
 
 	#Get dataframes of each gmt library in all_libs
 	os.chdir('libs')
-	all_dfs = {x:convert_gmt('df', x) for x in my_libs}
+	all_dfs = {x:convert_gmt('df', x) for x in all_libs}
 	os.chdir('..')
 	if not os.path.isdir('results'): os.makedirs('results')
 	os.chdir('results')
 
 	#Iterate over each gmt pair.
-	lib_df_pairs = [{'l':all_dfs[a], 'f':all_dfs[b]} for a in creeds_libs for b in other_libs] + [{'l':all_dfs[a], 'f':all_dfs[b]} for a in other_libs for b in creeds_libs]
-
-	Parallel(n_jobs=4, verbose=0)(delayed(enrichment_wrapper)(pair)for pair in lib_df_pairs)
+	lib_df_pairs = [{'l':all_dfs[a], 'f':all_dfs[b]} for a in all_libs for b in all_libs if a != b]
+	Parallel(n_jobs=6, verbose=0)(delayed(enrichment_wrapper)(pair)for pair in lib_df_pairs)

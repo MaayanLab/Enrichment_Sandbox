@@ -11,6 +11,7 @@ from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier,
 	RandomTreesEmbedding, AdaBoostClassifier, ExtraTreesClassifier
 import json, requests
 import operator, time
+from sklearn.svm import LinearSVC
 
 #Each method MUST have the FIRST argument be l_tf_genes, the genes in the label library tf. 
 #See enrichment_wrapper in get_rankings.py 
@@ -196,7 +197,8 @@ def ML_wrapper(l_tf_genes, method, train_group, features, random_state):
 	target = [str(x) in l_tf_genes for x in train_group.index.values]
 	clf = method(random_state = random_state)
 	clf.fit(train_group[features], target)
-	return [-x for x in clf.feature_importances_]
+	if method == LinearSVC: return [-abs(x) for x in clf.coef_]
+	else: return [-x for x in clf.feature_importances_]
 
 def ML_iterative(l_tf_genes, method, it, train_group, features, random_state):
 	#This is a wrapper for sklearn.ensemble methods, which chooses features recursively.
@@ -214,3 +216,30 @@ def ML_iterative(l_tf_genes, method, it, train_group, features, random_state):
 			x += 1
 			f.remove(tf)
 	return rankings
+
+def ML_fisher_cutoff(l_tf_genes, method, cutoff_frac, train_group, features, random_state):
+	fisher_results = pd.Series(Fisher(l_tf_genes, train_group), index=train_group.columns)
+	n_to_keep = int(len(fisher_results) * cutoff_frac)
+	new_features = fisher_results.sort_values().index[:n_to_keep]
+	new_train_group = train_group[new_features]
+	new_scores_for_top_features = pd.Series(ML_wrapper(l_tf_genes, RandomForestClassifier, new_train_group, new_features, random_state), 
+		index=new_features)
+	for f in new_features: fisher_results[f] = new_scores_for_top_features[f]
+	return fisher_results.values
+
+def ML_fisher_cutoff_V2(l_tf_genes, method, cutoff_frac, train_group, features, random_state):
+	fisher_results = pd.Series(Fisher(l_tf_genes, train_group), index=train_group.columns)
+	n_to_keep = int(len(fisher_results) * cutoff_frac)
+	top_features = fisher_results.sort_values().index[:n_to_keep]
+	ML_scores_for_top_features = pd.Series(ML_wrapper(l_tf_genes, RandomForestClassifier, train_group, features, random_state), 
+		index=features)
+	for f in top_features: fisher_results[f] = ML_scores_for_top_features[f]
+	return fisher_results.values
+
+def Fisher_ML_cutoff(l_tf_genes, method, cutoff_frac, train_group, features, random_state):
+	ML_results = pd.Series(ML_wrapper(l_tf_genes, RandomForestClassifier, train_group, features, random_state), index=features)
+	n_to_keep = int(len(ML_results) * cutoff_frac)
+	top_features = ML_results.sort_values().index[:n_to_keep]
+	p_vals_for_top_features= pd.Series(Fisher(l_tf_genes, train_group[top_features]), index=top_features)
+	for f in top_features: ML_results[f] = p_vals_for_top_features[f] - 2
+	return ML_results.values

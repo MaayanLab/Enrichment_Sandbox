@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from get_scores import clean
-from math import sqrt
+from math import sqrt, ceil
 from sklearn.metrics import auc
 from joblib import Parallel, delayed
 from collections import Counter
@@ -56,7 +56,7 @@ def pairwise_plots(pair):
 		dn = open_csv(dn_file)
 		for column in up:
 			#Get the BEST score for each feature library experiment.
-			combined = pd.Series([min(up[column][x], dn[column][x]) for x in range(up.shape[0])], index=up.index) 
+			combined = pd.Series([min(*l) for l in zip(up[column], dn[column])], index=up.index) 
 			#Sort the feature library experiments by their scores.
 			ordered_tfs = combined.sort_values().index
 			#Get the indices of the feature library experiments which match the label library tf.
@@ -123,18 +123,18 @@ def pairwise_plots(pair):
 	#Plot the results for all enrichment methods, if any.
 	if not agg_c.empty:
 		#BRIDGE PLOT 
-		plt.figure(3, figsize=(5.7,5))
+		plt.figure(1, figsize=(10,10))
 		font = {'size': 11}
 		plt.rc('font', **font)
 		#Plot each enrichment method.
 		for column in agg_c:
 			col = (column.partition(',')[0], column.partition(',')[2])
-			if col[1] == 'x':
+			if col[1] == 'x' and (col[0] in ['Fisher','RandomForest']):
 				plot_curve(agg_c, col, '')
 		plt.title(pair['l'].replace('_up', '_up/dn') + ' to ' + pair['f'].replace('_up', '_up/dn') + ' Bridge Plot')
 		plt.xlabel('Rank')
-		#Un-comment the line below to view only the first few ranks.
-		#plt.gca().set_xlim([0,10])
+		#Comment the line below to view only the first few ranks.
+		#plt.gca().set_xlim([0,.10])
 		plt.legend(prop={'size':9}, frameon=False)
 		plt.show()
 
@@ -147,7 +147,7 @@ def combined_plot(lib_df_pairs):
 	lib_df_pairs : dict
 		keys are names of the gmt libraries; values are their dfs. 
 	'''
-	plt.figure(3, figsize=(12,12))
+	plt.figure(2, figsize=(12,12))
 	font = {'size': 12}
 	plt.rc('font', **font)
 	for pair in lib_df_pairs:
@@ -158,7 +158,7 @@ def combined_plot(lib_df_pairs):
 			for column in agg_c:
 				col = (column.partition(',')[0], column.partition(',')[2])
 				#Use the 'if' statement below to filter out which results you want to view.
-				if 'Fisher' in col[0] and col[1] == 'x':
+				if col[1] == 'x' and (col[0] in ['Fisher','RandomForest']):
 					plot_curve(agg_c, col, prefix)
 	plt.title(pair['l'].replace('_up', '_up/dn') + ' to ' + pair['f'].replace('_up', '_up/dn') + ' Bridge Plot')
 	plt.xlabel('Rank')
@@ -167,11 +167,55 @@ def combined_plot(lib_df_pairs):
 	plt.show()
 	return
 
+def subplots(lib_df_pairs, all_libs):
+	f, axarr = plt.subplots(nrows=len(all_libs),ncols=len(all_libs), figsize=(9,8))
+	font = {'size':8}
+	plt.rc('font', **font)
+
+	methods = pd.Series()
+
+	for i in range(len(all_libs)):
+		for j in range(len(all_libs)):
+			rlib = all_libs[i]
+			clib = all_libs[j]
+			subplot = axarr[i,j]
+			if {'l':rlib, 'f':clib} in lib_df_pairs:
+				prefix = 'from_' + rlib + '_to_' + clib
+				rank_fname = 'rankings_' + prefix + '.csv'
+				if os.path.isfile(rank_fname): 
+					agg_c = open_csv(rank_fname)
+					for column in agg_c:
+						col = (column.partition(',')[0], column.partition(',')[2])
+						#Use the 'if' statement below to filter out which results you want to view.
+						if col[1] == 'x' and (col[0] in ['Fisher','RandomForest', 'Control']):
+							name = col[0] 
+							x_vals = [a/len(agg_c[name + ',x']) for a in agg_c[name + ',x']]
+							y_vals = agg_c[name + ',y']
+							methods[name] = subplot.plot(x_vals, y_vals, label= name)
+			#else: subplot.axis('off')
+			subplot.set_ylim([-.1,.4])
+			if j != 0: subplot.yaxis.set_visible(False)
+			subplot.tick_params(axis='both', which='both', bottom='off', top='off',labelbottom='off')
+			#subplot.xlabel('Rank')
+			#f.gca().set_ylim([0,.5])
+			#subplot.legend(prop={'size':8}, frameon=False)
+
+	lib_titles = [x.replace('Single_Gene_Perturbations_from_GEO_up', 'CREEDS_up/dn_sep') for x in all_libs]
+	for ax, col in zip(axarr[0], lib_titles): ax.set_title(col)
+	for ax, row in zip(axarr[:,0], lib_titles): ax.set_ylabel(row, size='large')
+	f.subplots_adjust(hspace=.15, wspace=.1)
+	plt.legend([x for sublist in methods.values for x in sublist], methods.index)
+	plt.show()
+	return methods
+
 if __name__ == '__main__':
-	creeds_libs = ['Single_Gene_Perturbations_from_GEO_up', 'Single_Gene_Perturbations_from_GEO_down']
-	other_libs = ['ENCODE_TF_ChIP-seq_2015', 'ChEA_2016']
-	all_libs = creeds_libs + other_libs
-	lib_pairs = [{'l':a, 'f':b} for a in all_libs for b in all_libs if a != b]
+	libs = ['CREEDS', 'ENCODE_TF_ChIP-seq_2015', 'ChEA_2016']
+	lib_pairs = [{'l':a, 'f':b} for a in libs for b in libs if a != b]
+	CREEDS_sep_pairs = [{'l':a, 'f':'Single_Gene_Perturbations_from_GEO_up'} for a in libs if a != 'CREEDS'] + [
+	{'l':'Single_Gene_Perturbations_from_GEO_up', 'f':b} for b in libs if b != 'CREEDS']
+	all_pairs = lib_pairs + CREEDS_sep_pairs
+	all_libs = ['Single_Gene_Perturbations_from_GEO_up'] + libs
 	os.chdir('results')
-	x = Parallel(n_jobs=2, verbose=0)(delayed(pairwise_plots)(pair) for pair in lib_pairs)
-	combined_plot(lib_pairs)
+	#Parallel(n_jobs=1, verbose=0)(delayed(pairwise_plots)(pair) for pair in all_pairs)
+	#combined_plot(all_pairs)
+	m = subplots(all_pairs, all_libs)
