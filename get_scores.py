@@ -24,13 +24,7 @@ def get_overlaps(label_tfs, feature_tfs):
 
 def get_methods_and_params(l,f, l_name, f_name):
 	'''
-	######################################################################################################################################
-	This is where you choose which enrichment methods to run, and which paramaters to use!
-	This function will return a dataframe with index ['method', 'params'], and columns as the names of each enrichment method/param combo.
-	For example, a column with name 'Foo3' might have 'method' m.Foo() and 'params' bootstrap = False.
-	See enrichment_methods.py for the available methods and necessary params.
-	You must specify ALL the params EXCEPT for l_tf_genes, which is initialized and called later, in enrichment_wrapper().
-	######################################################################################################################################
+	Returns a dataframe with methods and their parameters.
 	l : pandas.DataFrame
 		the "label" gmt library, from which tfs are being used as input gene sets
 	f: pandas.DataFrame
@@ -58,20 +52,22 @@ def get_methods_and_params(l,f, l_name, f_name):
 	train_group = f
 	features = f.columns.values
 
-	#Create the output dataframe.
+	#=====================================================================================================================================
+	#This is where you choose which enrichment methods to run, and which paramaters to use!
+	#Create a dataframe with index ['method', 'params'], and columns as the names of each enrichment method/param combo.
+	#For example, a column with name 'Foo3' might have 'method' m.Foo() and 'params' bootstrap = False.
+	#See enrichment_methods.py for the available methods and necessary params.
+	#You must specify ALL the params EXCEPT for l_tf_genes, which is initialized and called later, in enrichment_wrapper().
+	#=====================================================================================================================================
 	df = pd.DataFrame(index=['func', 'params'])
 	#df['Control'] = [m.Control, ([f.columns.values])]
 	#df['Fisher'] = [m.Fisher, ([f])]
 	#df['FAV'] = [m.FisherAdjusted, (f, l_name, f_name, ARCHS4_genes_dict)]
 	#df['ZAndCombined'] = [m.ZAndCombined, (f_name, f.columns.values)]
-	#df['RandomForest'] = [m.Forest, (train_group, features, 73017)]
-	#df['ForestDrop'] = [m.ML_iterative, (RandomForestClassifier, train_group, features, 73017)]
-	#df['RandomTreesEmbedding'] = [m.ML_wrapper, (RandomTreesEmbedding, train_group, features, 73017)]
-	#df['ExtraTreesClassifier'] = [m.ML_wrapper, (ExtraTreesClassifier, train_group, features, 73017)]
-	df['ForestFisherCutoff.10'] = [m.ML_fisher_cutoff, (RandomForestClassifier, .10, train_group, features, 73017)]
-	df['ForestFisherCutoff.25'] = [m.ML_fisher_cutoff, (RandomForestClassifier, .25, train_group, features, 73017)]
-	df['ForestFisherCutoff.5'] = [m.ML_fisher_cutoff, (RandomForestClassifier, .50, train_group, features, 73017)]
-	df['ForestFisherCutoff.05'] = [m.ML_fisher_cutoff, (RandomForestClassifier, .05, train_group, features, 73017)]
+	#df['RandomForest'] = [m.ML_wrapper, (RandomForestClassifier, train_group, features, 73017)]
+	#df['GradientBoosting'] = [m.ML_wrapper, (GradientBoostingClassifier, train_group, features, 73017)]
+	df['RandomForest_mf_log2'] = [m.ML_wrapper_adjusted, (RandomForestClassifier, train_group, features, 73017, 'log2', None)]
+	df['RandomForest_cw_balanced'] = [m.ML_wrapper_adjusted, (RandomForestClassifier, train_group, features, 73017, 'auto', 'balanced')]
 
 	return df
 

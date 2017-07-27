@@ -11,7 +11,7 @@ from setup import open_csv
 
 def plot_curve(df, col, prefix):
 	'''
-	Plots a single curve.
+	Plots a single bridge plot curve.
 	(Helper function to pairwise_plots and combined_plot.)
 	df : pandas.DataFrame
 		Columns looks like this: ['Fisher,x', 'Fisher,y', 'Foo3,x', 'Foo3,y']
@@ -28,7 +28,7 @@ def plot_curve(df, col, prefix):
 		+ '    ' + 'AUC: ' + str(np.round(auc(x_vals, y_vals), 4)))
 
 def pairwise_plots(pair):
-	'''Plots a graph for the specified library pair.
+	'''Creates a bridge plot for enrichment between the specified library pair.
 	pair : dict
 		Key 'l' contains the label library name, and key 'f' contains the feature library name. 
 	'''
@@ -109,7 +109,7 @@ def pairwise_plots(pair):
 			print(m_name, '   ', len(r), 'hits', '   ', r_shape)
 			agg_r[m_name] = r
 
-	#If there were any new ranking files, we need to get and save their plot coordinates for later.
+	#If any new ranking files were found, we need to get and save their plot coordinates for later.
 	if not agg_r.empty:
 		ranks_range, n_rankings = r_shape[0], r_shape[1]
 		for column in agg_r:
@@ -122,18 +122,18 @@ def pairwise_plots(pair):
 
 	#Plot the results for all enrichment methods, if any.
 	if not agg_c.empty:
-		#BRIDGE PLOT 
 		plt.figure(1, figsize=(10,10))
 		font = {'size': 11}
 		plt.rc('font', **font)
 		#Plot each enrichment method.
 		for column in agg_c:
 			col = (column.partition(',')[0], column.partition(',')[2])
-			if col[1] == 'x' and (col[0] in ['Fisher','RandomForest']):
+			#Filter for only certain enrichment methods here using the if statement.
+			if col[1] == 'x' and (col[0] in ['Fisher','CombinedFF', 'RandomForest', 'CombinedFF2']):
 				plot_curve(agg_c, col, '')
 		plt.title(pair['l'].replace('_up', '_up/dn') + ' to ' + pair['f'].replace('_up', '_up/dn') + ' Bridge Plot')
 		plt.xlabel('Rank')
-		#Comment the line below to view only the first few ranks.
+		#Uncomment the line below to view only the first few ranks.
 		#plt.gca().set_xlim([0,.10])
 		plt.legend(prop={'size':9}, frameon=False)
 		plt.show()
@@ -143,7 +143,6 @@ def pairwise_plots(pair):
 def combined_plot(lib_df_pairs):
 	'''
 	Plots a single graph for all results, across all libraries and methods.
-	(You can filter out which plots to view.)
 	lib_df_pairs : dict
 		keys are names of the gmt libraries; values are their dfs. 
 	'''
@@ -157,29 +156,40 @@ def combined_plot(lib_df_pairs):
 			agg_c = open_csv(rank_fname)
 			for column in agg_c:
 				col = (column.partition(',')[0], column.partition(',')[2])
-				#Use the 'if' statement below to filter out which results you want to view.
+				#Filter for only certain enrichment methods here using the if statement.
 				if col[1] == 'x' and (col[0] in ['Fisher','RandomForest']):
 					plot_curve(agg_c, col, prefix)
 	plt.title(pair['l'].replace('_up', '_up/dn') + ' to ' + pair['f'].replace('_up', '_up/dn') + ' Bridge Plot')
 	plt.xlabel('Rank')
-	plt.gca().set_xlim([0,.5])
+	#Uncomment the line below to view only the first few ranks.
+	#plt.gca().set_xlim([0,.10])
 	plt.legend(prop={'size':10}, frameon=False)
 	plt.show()
 	return
 
-def subplots(lib_df_pairs, all_libs):
-	f, axarr = plt.subplots(nrows=len(all_libs),ncols=len(all_libs), figsize=(9,8))
-	font = {'size':8}
+def subplots(lib_pairs, all_libs):
+	'''
+	Like pairwise_plots, but shows all plots as different subplots in the same figure, organized in a grid.
+	lib_pairs : dict
+		keys are names of the gmt libraries; values are their dfs. 
+	all_libs : list-like
+		the gmt libraries in lib_pairs
+	'''
+	f, axarr = plt.subplots(nrows=len(all_libs),ncols=len(all_libs), figsize=(8,7))
+	font = {'size':11}
 	plt.rc('font', **font)
 
+	#IMPORTANT: this only works if each lib_pair has the EXACT same plots, e.g. Fisher and Control.
 	methods = pd.Series()
 
+	#Create the grid by iterating over all_libs.
 	for i in range(len(all_libs)):
 		for j in range(len(all_libs)):
 			rlib = all_libs[i]
 			clib = all_libs[j]
 			subplot = axarr[i,j]
-			if {'l':rlib, 'f':clib} in lib_df_pairs:
+			#Check if you want to plot this pair (e.g. you dont if rlib and clib are identical).
+			if {'l':rlib, 'f':clib} in lib_pairs:
 				prefix = 'from_' + rlib + '_to_' + clib
 				rank_fname = 'rankings_' + prefix + '.csv'
 				if os.path.isfile(rank_fname): 
@@ -187,26 +197,85 @@ def subplots(lib_df_pairs, all_libs):
 					for column in agg_c:
 						col = (column.partition(',')[0], column.partition(',')[2])
 						#Use the 'if' statement below to filter out which results you want to view.
-						if col[1] == 'x' and (col[0] in ['Fisher','RandomForest', 'Control']):
+						if col[1] == 'x' and (col[0] in ['Fisher','RandomForest', 'Control', 'CombinedFF']):
 							name = col[0] 
 							x_vals = [a/len(agg_c[name + ',x']) for a in agg_c[name + ',x']]
 							y_vals = agg_c[name + ',y']
 							methods[name] = subplot.plot(x_vals, y_vals, label= name)
-			#else: subplot.axis('off')
 			subplot.set_ylim([-.1,.4])
+			#uncomment below to see just top 10%.
+			#subplot.set_xlim([0,.1])
+			#Only show y-axis on left-most plots.
 			if j != 0: subplot.yaxis.set_visible(False)
+			#Do not show ticks -- although axis='both', this only seems to affect the x-axis.
 			subplot.tick_params(axis='both', which='both', bottom='off', top='off',labelbottom='off')
-			#subplot.xlabel('Rank')
-			#f.gca().set_ylim([0,.5])
-			#subplot.legend(prop={'size':8}, frameon=False)
 
+	#Label the rows and columns of the figure
 	lib_titles = [x.replace('Single_Gene_Perturbations_from_GEO_up', 'CREEDS_up/dn_sep') for x in all_libs]
 	for ax, col in zip(axarr[0], lib_titles): ax.set_title(col)
 	for ax, row in zip(axarr[:,0], lib_titles): ax.set_ylabel(row, size='large')
+	#Leave some space between the subplots
 	f.subplots_adjust(hspace=.15, wspace=.1)
+	#Create a legend in the last cell (should be empty, as it is a diagonal).
 	plt.legend([x for sublist in methods.values for x in sublist], methods.index)
+	plt.suptitle('Bridge Plots From "Row" to "Column", Top 10 Percentile', fontsize=15)
 	plt.show()
 	return methods
+
+def hexbin_method_comparison(libs, m1, m2):
+	'''
+	Creates a grid of heatmaps comparing how two different methods rank the "hits"/"matches".
+	libs : list-like
+		the gmt libraries to create heatmaps for
+	m1 : str
+		the first method, to correspond with the x-axis
+	m2 : str
+		the second method, to correspond with the y-axis
+	'''
+
+	def get_coords(f1, f2):
+		coords_collection = []
+		s1, s2 = open_csv(f1), open_csv(f2)
+		s1len = s1.shape[0]
+		s2len = s2.shape[0]
+		for column in s1: 
+			ordered_s1 = s1[column].sort_values().index
+			ordered_s2 = s2[column].sort_values().index
+			these_coords = [(ordered_s1.get_loc(x) / s1len, ordered_s2.get_loc(x) / s2len) for 
+				x in ordered_s1 if clean(x) == clean(column)]
+			coords_collection += these_coords
+		x,y = zip(*coords_collection)
+		return x,y
+
+	f, axarr = plt.subplots(nrows=len(libs),ncols=len(libs), figsize=(9,9))
+	font = {'size':11}
+	plt.rc('font', **font)
+
+	#Create the grid by iterating over libs.
+	for i in range(len(libs)):
+		for j in range(len(libs)):
+			rlib = libs[i]
+			clib = libs[j]
+			subplot = axarr[i,j]
+			if {'l':rlib, 'f':clib} in lib_pairs:
+				prefix = 'from_' + rlib + '_to_' + clib
+				fname1 = prefix + '_' + m1 + '.csv'
+				fname2 = prefix + '_' + m2 + '.csv'
+				if fname1 in os.listdir(os.getcwd()) and fname2 in os.listdir(os.getcwd()):
+					x,y = get_coords(fname1, fname2)
+					subplot.hexbin(x, y, gridsize=30, cmap='binary', bins=[pow(1.3,x) for x in range(1,22)])
+					#subplot.plot(x,y, 'o') #if you want a regular dot plot
+			if j != 0: subplot.yaxis.set_visible(False)
+			subplot.tick_params(axis='x', which='both', bottom='off', top='off',labelbottom='off')
+			subplot.axes.get_yaxis().set_ticks([])
+
+	lib_titles = [x.replace('Single_Gene_Perturbations_from_GEO_up', 'CREEDS_up/dn_sep') for x in libs]
+	for ax, col in zip(axarr[0], lib_titles): ax.set_title(col)
+	for ax, row in zip(axarr[:,0], lib_titles): ax.set_ylabel(row, size='large')
+	f.subplots_adjust(hspace=.03, wspace=.03)
+	plt.suptitle('HexBin Plots, ' + m1 + ' (x) to ' + m2 + ' (y)', fontsize=15)
+	plt.show()
+	return 
 
 if __name__ == '__main__':
 	libs = ['CREEDS', 'ENCODE_TF_ChIP-seq_2015', 'ChEA_2016']
@@ -218,4 +287,5 @@ if __name__ == '__main__':
 	os.chdir('results')
 	#Parallel(n_jobs=1, verbose=0)(delayed(pairwise_plots)(pair) for pair in all_pairs)
 	#combined_plot(all_pairs)
-	m = subplots(all_pairs, all_libs)
+	#subplots(lib_pairs, libs)
+	hexbin_method_comparison(libs, 'Fisher', 'RandomForest')

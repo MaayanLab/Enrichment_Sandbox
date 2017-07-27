@@ -13,8 +13,10 @@ import json, requests
 import operator, time
 from sklearn.svm import LinearSVC
 
+#==========================================================================================
 #Each method MUST have the FIRST argument be l_tf_genes, the genes in the label library tf. 
 #See enrichment_wrapper in get_rankings.py 
+#==========================================================================================
 
 def Control(l_tf_genes, f_tfs):
 	'''Return the tfs in random order.'''
@@ -36,24 +38,20 @@ def Fisher(l_tf_genes, f_matrix):
 def FisherAdjusted(l_tf_genes, f_matrix, l_lib, f_lib, ARCHS4_genes_dict):
 	'''Like Fisher(), but weighs p vals by gene correlation within the intersection cell of the contingency table,
 	Reward for high correlation. Also, weigh this reward by the degree of overlap with the ARCHS4 library.'''
-	
+	#Get the correlation data.
 	cwd = os.getcwd()
 	os.chdir('..')
 	os.chdir('libs')
-	#Get the correlation data
 	ARCHS4 = h5py.File(l_lib + '_ARCHS4_corr.h5', 'r+')
 	os.chdir('..')
 	os.chdir(cwd)
 
-	#tfs within f_matrix will either be from human or mouse. So, store both gene lists in ARCHS4_genes_dict.
-	#Note that the /index/ contains the genes, and the /values/ contain the indices. 
-	#This is because we will need to access the indices from a list of genes. 
-
+	#Get variables which will be the same for each iteration, or only depend on the organism. 
 	l_tf_genes = set(l_tf_genes)
 	c_overlap_dict = {'human':{str(x).encode('utf-8') for x in l_tf_genes} & set(ARCHS4_genes_dict['human'].index),
 		'mouse':{str(x).encode('utf-8') for x in l_tf_genes} & set(ARCHS4_genes_dict['mouse'].index)}
-
 	if f_lib == 'ENCODE_TF_ChIP-seq_2015': organism_dict = {'hg19': 'human', 'mm9': 'mouse'}
+
 	#For each tf, store the information collected in 'info' for use in the next iteration.
 	info = pd.DataFrame(index=['p', 'o_frac', 'o_frac2', 'r', 'r2'], columns = f_matrix.columns)
 	info.loc['o_frac',:] = 0
@@ -79,18 +77,20 @@ def FisherAdjusted(l_tf_genes, f_matrix, l_lib, f_lib, ARCHS4_genes_dict):
 		else: print('invalid lib name!')
 		if organism == 'rat': organism = 'mouse'
 		if organism in ['human', 'mouse']:
-			#Use 'ARCHS4_genes_dict' to get the appropriate list of ARCHS4 genes
+
+			#Use 'ARCHS4_genes_dict' to get the appropriate list of ARCHS4 genes.
 			ARCHS4_genes = ARCHS4_genes_dict[organism]
-			#'overlap' will contain a list of genes both in ARCHS4 and in the intersection cell.
+
+			#Get the overlap of ARCHS4 genes with the contingency table cells.
 			b_overlap = {str(x).encode('utf-8') for x in f_tf_genes} & set(ARCHS4_genes.index)
 			c_overlap = c_overlap_dict[organism]
 			a_overlap = b_overlap & c_overlap
-
 			a_l_o = len(a_overlap)
 			b_l_o = len(b_overlap)
 			c_l_o = len(c_overlap)
-
 			l_o = len(b_overlap | c_overlap)
+			
+			#will edit comments below later.
 			if l_o > 0: 
 				#'o_frac' is the proportion of genes in the intersection cell which are also in ARCHS4.
 				#Limit its value to < .95 to prevent an extreme effect when used in the adjustment formula. 
@@ -111,6 +111,7 @@ def FisherAdjusted(l_tf_genes, f_matrix, l_lib, f_lib, ARCHS4_genes_dict):
 						r_vals = ARCHS4[organism]['data']['correlation'][a_overlap_indices][:,a_overlap_indices]
 						info.at['r2',tf] = min((np.sum(r_vals) - a_l_o)/(a_l_o*a_l_o - a_l_o),.95)
 
+		#If the organism cannot be identified, ARCHS4 cannot be used.
 		else: print('weird organism:', organism, tf)
 	ARCHS4.close()
 
@@ -171,7 +172,7 @@ def ZAndCombined(l_tf_genes, f_lib, f_tfs):
 		gene_set_lib = x
 		user_list_id = get_id(l_tf_genes)
 		url = ENRICHR_URL + query_string % (user_list_id, gene_set_lib)
-		time.sleep(1) #Delay needed, otherwise Enrichr returns an error
+		time.sleep(1) #Delay needed, otherwise Enrichr returns an error.
 
 		response = requests.get(url)
 		if not response.ok:
@@ -193,19 +194,28 @@ def ZAndCombined(l_tf_genes, f_lib, f_tfs):
 	return list(z_scores), [-x for x in list(combined)]
 
 def ML_wrapper(l_tf_genes, method, train_group, features, random_state):
-	#This is a wrapper for sklearn.ensemble methods.
+	'''This is a wrapper for sklearn.ensemble methods.'''
 	target = [str(x) in l_tf_genes for x in train_group.index.values]
 	clf = method(random_state = random_state)
 	clf.fit(train_group[features], target)
 	if method == LinearSVC: return [-abs(x) for x in clf.coef_]
 	else: return [-x for x in clf.feature_importances_]
 
+def ML_wrapper_adjusted(l_tf_genes, method, train_group, features, random_state, max_features, class_weight):
+	'''This is a duplicate of ML_wrapper, in case parameters need to be added to the method.'''
+	target = [str(x) in l_tf_genes for x in train_group.index.values]
+	clf = method(random_state = random_state, max_features = max_features, class_weight=class_weight)
+	clf.fit(train_group[features], target)
+	if method == LinearSVC: return [-abs(x) for x in clf.coef_]
+	else: return [-x for x in clf.feature_importances_]
+
 def ML_iterative(l_tf_genes, method, it, train_group, features, random_state):
-	#This is a wrapper for sklearn.ensemble methods, which chooses features recursively.
+	'''This is a wrapper for sklearn.ensemble methods which calls the method recursively, incrementally choosing features.'''
 	f = list(features)
 	rankings = pd.Series(index=features)
 	x = 0
 	while x < len(list(features)):
+		#For the top fifty features, only choose "it" number of features at each iteration.
 		if x<50: n_to_drop = it
 		else: n_to_drop = 300
 		this_iteration_ranks = pd.Series(ML_wrapper(l_tf_genes, method, train_group, f, random_state), index = f)
@@ -218,28 +228,37 @@ def ML_iterative(l_tf_genes, method, it, train_group, features, random_state):
 	return rankings
 
 def ML_fisher_cutoff(l_tf_genes, method, cutoff_frac, train_group, features, random_state):
+	'''Uses Fisher to remove low-ranking features, then uses ML on the rest to rank them.'''
 	fisher_results = pd.Series(Fisher(l_tf_genes, train_group), index=train_group.columns)
 	n_to_keep = int(len(fisher_results) * cutoff_frac)
 	new_features = fisher_results.sort_values().index[:n_to_keep]
 	new_train_group = train_group[new_features]
+	#Call the ML method using the remaining subset.
 	new_scores_for_top_features = pd.Series(ML_wrapper(l_tf_genes, RandomForestClassifier, new_train_group, new_features, random_state), 
 		index=new_features)
+	#range(Fisher) is [0,1]; range(ML_wrapper) is [-1,0] so new_scores_for_top_features are guaranteed to be in a higher rank tier, so to speak.
 	for f in new_features: fisher_results[f] = new_scores_for_top_features[f]
 	return fisher_results.values
 
 def ML_fisher_cutoff_V2(l_tf_genes, method, cutoff_frac, train_group, features, random_state):
+	'''Uses Fisher to remove low-ranking features, then uses ML on all features to rank only the remaining subset.'''
 	fisher_results = pd.Series(Fisher(l_tf_genes, train_group), index=train_group.columns)
 	n_to_keep = int(len(fisher_results) * cutoff_frac)
 	top_features = fisher_results.sort_values().index[:n_to_keep]
+	#Call the ML method using all of the features...
 	ML_scores_for_top_features = pd.Series(ML_wrapper(l_tf_genes, RandomForestClassifier, train_group, features, random_state), 
 		index=features)
+	#...but only revise scores for the subset which ranked highly on the Fisher test.
 	for f in top_features: fisher_results[f] = ML_scores_for_top_features[f]
 	return fisher_results.values
 
 def Fisher_ML_cutoff(l_tf_genes, method, cutoff_frac, train_group, features, random_state):
+	'''Uses ML to remove low-ranking features, then uses Forest to rank the rest.'''
 	ML_results = pd.Series(ML_wrapper(l_tf_genes, RandomForestClassifier, train_group, features, random_state), index=features)
 	n_to_keep = int(len(ML_results) * cutoff_frac)
 	top_features = ML_results.sort_values().index[:n_to_keep]
+	#Get p values for the top features
 	p_vals_for_top_features= pd.Series(Fisher(l_tf_genes, train_group[top_features]), index=top_features)
+	#Revise the scores of the top features. range(Fisher - 2) will be [-2,0], which sets it in a higher rank tier, so to speak.
 	for f in top_features: ML_results[f] = p_vals_for_top_features[f] - 2
 	return ML_results.values

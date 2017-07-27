@@ -26,7 +26,7 @@ def convert_gmt(output_type, lib_name):
 		Name of the gmt file. This file must be in the current working directory. 
 	'''
 	#The first part of this list, ending at 'nan', comes from pandas.read_csv(na_values) documentation.
-		#From this list, 'NA' is removed because it is, in fact, a gene. 
+		#From the original list, 'NA' was removed because it is, in fact, a gene. 
 	#The second part of this list, beginning with '---', was added according to my own observations.
 	MY_NA_VALS = {'', '#N/A', '#N/A N/A', '#NA', '-1.#IND', '-1.#QNAN',
 		'-NaN', '-nan', '1.#IND', '1.#QNAN', 'N/A', 'NULL', 'NaN', 'nan', 
@@ -82,7 +82,7 @@ def combine_gmts(gmts, output_fname):
 	From two gmt files with the same tfs in the same order, creates a df of their gene set intersections.
 	gmts : list 
 		Contains the names of the two gmt files, which must be in the current working directory. 
-	output_fname: str
+	output_fname : str
 		Name of the output file. 
 	'''
 	if file_exists(output_fname): return
