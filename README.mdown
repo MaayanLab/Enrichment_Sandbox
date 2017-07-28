@@ -21,16 +21,16 @@ The following visualizations are available:
 * An array of hexbin plots, with each library pair in its own subplot
 The bridge plots can be zoomed-in to view only the top ranks, and filtered to view only certain methods.
 
+Currently, visualization of drug-to-gene library benchmarking is not yet complete. 
+
 <div style="display:inline">
-<img src="sample_result_sklearn.png"/>
+<img src="sample_result_grid.png"/>
 <img src="sample_result_drugs.png"/>
 </div>
 <div style="display:inline">
-<img src="sample_result_grid.png"/>
+<img src="sample_result_sklearn.png"/>
 <img src="sample_result_hexbin.png"/>
 </div>
-
-Currently, visualization of drug-to-gene library benchmarking is not yet complete. 
 
 # How to Use:
 
