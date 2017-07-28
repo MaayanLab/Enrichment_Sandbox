@@ -127,18 +127,19 @@ def FisherAdjusted(l_tf_genes, f_matrix, l_lib, f_lib, ARCHS4_genes_dict):
 
 	#Get the adjusted p val for each tf. Lower adjusted p vals are still considered more significant.
 	for tf in list(f_matrix.columns):
-		info.at['p_adjusted1',tf] = math.log(info.at['p',tf]) * (1/(1-info.at['r',tf]) ** (5 * info.at['o_frac',tf]))
-		info.at['p_adjusted2',tf] = math.log(info.at['p',tf]) * (1/(1-info.at['r',tf]) ** (10 * info.at['o_frac',tf]))
-		info.at['p_adjusted3',tf] = math.log(info.at['p',tf]) - info.at['r',tf] ** (info.at['o_frac',tf])
-		info.at['p_adjusted4',tf] = math.log(info.at['p',tf]) * (1 + info.at['r',tf] ** (info.at['o_frac',tf]))
-		info.at['p_adjusted5',tf] = math.log(info.at['p',tf]) - (1/(1-info.at['r',tf])) ** (info.at['o_frac',tf])
-		info.at['p_adjusted6',tf] = math.log(info.at['p',tf]) * (1/(1-info.at['r2',tf]) ** (5 * info.at['o_frac2',tf]))
-		info.at['p_adjusted7',tf] = math.log(info.at['p',tf]) * (1/(1-info.at['r2',tf]) ** (10 * info.at['o_frac2',tf]))
-		info.at['p_adjusted8',tf] = math.log(info.at['p',tf]) - info.at['r2',tf] ** (info.at['o_frac2',tf])
-		info.at['p_adjusted9',tf] = math.log(info.at['p',tf]) * (1 + info.at['r2',tf] ** (info.at['o_frac2',tf]))
-		info.at['p_adjusted10',tf] = math.log(info.at['p',tf]) - (1/(1-info.at['r2',tf])) ** (info.at['o_frac2',tf])
+		info.at['p_adjusted1',tf] = math.log(info.at['p',tf]) * (1/(1-info.at['r',tf]) ** (100 * info.at['o_frac',tf]))
+		info.at['p_adjusted2',tf] = math.log(info.at['p',tf]) - (25/(1-info.at['r',tf])) ** (info.at['o_frac',tf])
+		info.at['p_adjusted3',tf] = math.log(info.at['p',tf]) - (1/(1-info.at['r',tf])) ** (info.at['o_frac',tf])
+		info.at['p_adjusted4',tf] = math.log(info.at['p',tf]) - (100/(1-info.at['r',tf])) ** (info.at['o_frac',tf])
+		info.at['p_adjusted5',tf] = (1 + math.log(info.at['p',tf])) * (1/(1-info.at['r',tf]) ** (info.at['o_frac',tf]))
+		info.at['p_adjusted6',tf] = math.log(info.at['p',tf]) * (1/(1-info.at['r2',tf]) ** (100 * info.at['o_frac2',tf]))
+		info.at['p_adjusted7',tf] = math.log(info.at['p',tf]) - (25/(1-info.at['r2',tf])) ** (info.at['o_frac2',tf])
+		info.at['p_adjusted8',tf] = math.log(info.at['p',tf]) - (1/(1-info.at['r2',tf])) ** (info.at['o_frac2',tf])
+		info.at['p_adjusted9',tf] = math.log(info.at['p',tf]) - (100/(1-info.at['r2',tf])) ** (info.at['o_frac2',tf])
+		info.at['p_adjusted10',tf] = (1 + math.log(info.at['p',tf])) * (1/(1-info.at['r2',tf]) ** (info.at['o_frac2',tf]))
+
 	return [info.loc['p_adjusted1',:], info.loc['p_adjusted2',:], info.loc['p_adjusted3',:], info.loc['p_adjusted4',:], info.loc['p_adjusted5',:], 
-	info.loc['p_adjusted6',:], info.loc['p_adjusted7',:], info.loc['p_adjusted8',:], info.loc['p_adjusted9',:], info.loc['p_adjusted10',:]]
+		info.loc['p_adjusted6',:], info.loc['p_adjusted7',:], info.loc['p_adjusted8',:], info.loc['p_adjusted9',:], info.loc['p_adjusted10',:]]
 
 def ZAndCombined(l_tf_genes, f_lib, f_tfs):
 	'''Uses the Enrichr API to return two lists containing the Z score and Combined score rankings.
