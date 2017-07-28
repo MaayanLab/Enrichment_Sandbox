@@ -24,11 +24,11 @@ The bridge plots can be zoomed-in to view only the top ranks, and filtered to vi
 Currently, visualization of drug-to-gene library benchmarking is not yet complete. 
 
 <div style="display:inline">
-<img src="sample_result_grid.png"/>
 <img src="sample_result_drugs.png"/>
+<img src="sample_result_sklearn.png"/>
 </div>
 <div style="display:inline">
-<img src="sample_result_sklearn.png"/>
+<img src="sample_result_grid.png"/>
 <img src="sample_result_hexbin.png"/>
 </div>
 
