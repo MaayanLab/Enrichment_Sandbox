@@ -6,7 +6,7 @@ import pandas as pd
 import h5py
 import matplotlib.pyplot as plt
 import scipy.stats as stats
-import math
+from math import log
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, \
 	RandomTreesEmbedding, AdaBoostClassifier, ExtraTreesClassifier
 import json, requests
@@ -14,16 +14,18 @@ import operator, time
 from sklearn.svm import LinearSVC
 
 #==========================================================================================
+'''
 #Each method MUST have the FIRST argument be l_tf_genes, the genes in the label library tf. 
 #See enrichment_wrapper in get_rankings.py 
+'''
 #==========================================================================================
 
 def Control(l_tf_genes, f_tfs):
-	'''Return the tfs in random order.'''
+	'''Assigns ranks randomly.'''
 	return random.sample(range(len(f_tfs)), len(f_tfs))
 
 def Fisher(l_tf_genes, f_matrix):
-	'''Return the tfs with ascending p vals as ranked by Fisher exact test with greater alternative.'''
+	'''Assigns p vals from Fisher exact test using the greater alternative.'''
 	p = pd.Series(index=f_matrix.columns)
 	for column in f_matrix:
 		f_tf_genes = set(f_matrix.index[f_matrix[column]])
@@ -36,8 +38,24 @@ def Fisher(l_tf_genes, f_matrix):
 	return(list(p))
 
 def FisherAdjusted(l_tf_genes, f_matrix, l_lib, f_lib, ARCHS4_genes_dict):
-	'''Like Fisher(), but weighs p vals by gene correlation within the intersection cell of the contingency table,
-	Reward for high correlation. Also, weigh this reward by the degree of overlap with the ARCHS4 library.'''
+	'''
+	Like Fisher(), but weighs p vals by gene correlation data from ARCHS4.
+	This function is currently designed to calculate correlation either within the "a" cell or between the 
+		"b" and "c" cells (in terms of the 2x2 contingency table). 
+	It is also designed to return the results of many different functions f(p,r,o) where
+		p is the Fisher exact p value and
+		r is the aggregated correlation score.
+		o is the degree of overlap with the genes in the contingency table cell(s) and ARCHS4.
+	Currently, this function is very slow due to the indexing required to obtain r. 
+
+	l_lib : str
+		name of the label library
+	f_lib : str
+		name of the feature library
+	ARCHS4_genes_dict : dict
+		keys are 'human' and 'mouse'; values are the genes in the corresponding ARCHS4 gene-gene correlation file
+			where the genes are the intersection of those in ARCHS4 and those in the label library
+	'''
 	#Get the correlation data.
 	cwd = os.getcwd()
 	os.chdir('..')
@@ -127,23 +145,25 @@ def FisherAdjusted(l_tf_genes, f_matrix, l_lib, f_lib, ARCHS4_genes_dict):
 
 	#Get the adjusted p val for each tf. Lower adjusted p vals are still considered more significant.
 	for tf in list(f_matrix.columns):
-		info.at['p_adjusted1',tf] = math.log(info.at['p',tf]) * (1/(1-info.at['r',tf]) ** (100 * info.at['o_frac',tf]))
-		info.at['p_adjusted2',tf] = math.log(info.at['p',tf]) - (25/(1-info.at['r',tf])) ** (info.at['o_frac',tf])
-		info.at['p_adjusted3',tf] = math.log(info.at['p',tf]) - (1/(1-info.at['r',tf])) ** (info.at['o_frac',tf])
-		info.at['p_adjusted4',tf] = math.log(info.at['p',tf]) - (100/(1-info.at['r',tf])) ** (info.at['o_frac',tf])
-		info.at['p_adjusted5',tf] = (1 + math.log(info.at['p',tf])) * (1/(1-info.at['r',tf]) ** (info.at['o_frac',tf]))
-		info.at['p_adjusted6',tf] = math.log(info.at['p',tf]) * (1/(1-info.at['r2',tf]) ** (100 * info.at['o_frac2',tf]))
-		info.at['p_adjusted7',tf] = math.log(info.at['p',tf]) - (25/(1-info.at['r2',tf])) ** (info.at['o_frac2',tf])
-		info.at['p_adjusted8',tf] = math.log(info.at['p',tf]) - (1/(1-info.at['r2',tf])) ** (info.at['o_frac2',tf])
-		info.at['p_adjusted9',tf] = math.log(info.at['p',tf]) - (100/(1-info.at['r2',tf])) ** (info.at['o_frac2',tf])
-		info.at['p_adjusted10',tf] = (1 + math.log(info.at['p',tf])) * (1/(1-info.at['r2',tf]) ** (info.at['o_frac2',tf]))
+		info.at['p_adjusted1',tf] = log(info.at['p',tf]) * (1/(1-info.at['r',tf]) ** (100 * info.at['o_frac',tf]))
+		info.at['p_adjusted2',tf] = log(info.at['p',tf]) * (1/(1-info.at['r',tf]) ** (1000 * info.at['o_frac',tf]))
+		info.at['p_adjusted3',tf] = log(info.at['p',tf]) - (1/(1-info.at['r',tf])) ** (info.at['o_frac',tf])
+		info.at['p_adjusted4',tf] = log(info.at['p',tf]) - (100/(1-info.at['r',tf])) ** (info.at['o_frac',tf])
+		info.at['p_adjusted5',tf] = (1 + log(info.at['p',tf])) * (1/(1-info.at['r',tf]) ** (info.at['o_frac',tf]))
+		info.at['p_adjusted6',tf] = log(info.at['p',tf]) * (1/(1-info.at['r2',tf]) ** (100 * info.at['o_frac2',tf]))
+		info.at['p_adjusted7',tf] = log(info.at['p',tf]) * (1/(1-info.at['r2',tf]) ** (1000 * info.at['o_frac2',tf]))
+		info.at['p_adjusted8',tf] = log(info.at['p',tf]) - (1/(1-info.at['r2',tf])) ** (info.at['o_frac2',tf])
+		info.at['p_adjusted9',tf] = log(info.at['p',tf]) - (100/(1-info.at['r2',tf])) ** (info.at['o_frac2',tf])
+		info.at['p_adjusted10',tf] = (1 + log(info.at['p',tf])) * (1/(1-info.at['r2',tf]) ** (info.at['o_frac2',tf]))
+
+	print(info.iloc[:,345])
 
 	return [info.loc['p_adjusted1',:], info.loc['p_adjusted2',:], info.loc['p_adjusted3',:], info.loc['p_adjusted4',:], info.loc['p_adjusted5',:], 
 		info.loc['p_adjusted6',:], info.loc['p_adjusted7',:], info.loc['p_adjusted8',:], info.loc['p_adjusted9',:], info.loc['p_adjusted10',:]]
 
 def ZAndCombined(l_tf_genes, f_lib, f_tfs):
-	'''Uses the Enrichr API to return two lists containing the Z score and Combined score rankings.
-	Note: results are not exactly the same: my ties are in different order.'''
+	'''Uses the Enrichr API to return two lists: one for Z score, the other for Combined score.
+	Note: results are not exactly the same as Enrichr: my ties are in a different order.'''
 	def get_id(l_tf_genes):
 		'''Give Enrichr the list of genes in the label tf. Returns the user_list_id.'''
 		ENRICHR_URL_ID = 'http://amp.pharm.mssm.edu/Enrichr/addList'
@@ -202,10 +222,21 @@ def ML_wrapper(l_tf_genes, method, train_group, features, random_state):
 	if method == LinearSVC: return [-abs(x) for x in clf.coef_]
 	else: return [-x for x in clf.feature_importances_]
 
-def ML_wrapper_adjusted(l_tf_genes, method, train_group, features, random_state, max_features, class_weight):
+def ML_wrapper_2(l_tf_genes, method, train_group, features, random_state, max_depth):
+	'''
+	This is a duplicate of ML_wrapper, in case parameters need to be added to the method.
+	In this case, there are extra parameters "max_features" and "class_weight".
+	'''
+	target = [str(x) in l_tf_genes for x in train_group.index.values]
+	clf = method(random_state = random_state, max_depth=max_depth)
+	clf.fit(train_group[features], target)
+	if method == LinearSVC: return [-abs(x) for x in clf.coef_]
+	else: return [-x for x in clf.feature_importances_]
+
+def ML_wrapper_adjusted(l_tf_genes, method, train_group, features, random_state, max_features):
 	'''This is a duplicate of ML_wrapper, in case parameters need to be added to the method.'''
 	target = [str(x) in l_tf_genes for x in train_group.index.values]
-	clf = method(random_state = random_state, max_features = max_features, class_weight=class_weight)
+	clf = method(random_state = random_state, max_features = max_features)
 	clf.fit(train_group[features], target)
 	if method == LinearSVC: return [-abs(x) for x in clf.coef_]
 	else: return [-x for x in clf.feature_importances_]
@@ -263,3 +294,63 @@ def Fisher_ML_cutoff(l_tf_genes, method, cutoff_frac, train_group, features, ran
 	#Revise the scores of the top features. range(Fisher - 2) will be [-2,0], which sets it in a higher rank tier, so to speak.
 	for f in top_features: ML_results[f] = p_vals_for_top_features[f] - 2
 	return ML_results.values
+
+def InfoGain(l_tf_genes, f_matrix, info_metric):
+	'''
+	Uses information gain as the enrichment score.
+	Information gain can either be calculated with entropy or with the gini impurity.
+	'''
+
+	def Info(p,n, info_metric):
+		if info_metric == 'Entropy':
+			if 0 in [p,n]: return 0
+			else:
+				a, b = p/(p+n), n/(p+n)
+				return - a * log(a,2) - b * log(b,2)
+
+		elif info_metric == 'Gini':	
+			return p/(p+n) * n/(p+n)
+
+		else: raise Exception('Invalid info_metric.')
+
+	#Store the score for each label library tf in "results"
+	results = pd.Series(index=f_matrix.columns)
+
+	#Get the set of genes corresponding to the label library tf
+	l_tf_genes = set(l_tf_genes)
+	#Get the set of genes in all of the feature library
+	f_lib_genes = set(f_matrix.index)
+
+	#Classify the feature library genes as either in the label library tf set (p), or not (n).
+	#(I am using the notation from the 1975 ID3 paper).
+	p_set = f_lib_genes & l_tf_genes
+	n_set = f_lib_genes - p_set
+	p, n = len(p_set), len(n_set)
+
+	#For each feature library tf, calculate the information gain resulting from a split on the tf.
+	for column in f_matrix:
+		f_tf_genes = set(f_matrix.index[f_matrix[column]])
+		p_in_set = f_tf_genes & l_tf_genes 
+		n_in_set = f_tf_genes - p_in_set
+
+		#"in" means in the feature library tf set; "out" means not in the feature library tf set.
+		p_in, n_in = len(p_in_set), len(n_in_set)
+		p_out = p - p_in
+		n_out = n - n_in
+
+		'''
+		p_in corresponds to the "a" cell of the 2x2 contingency table from Fisher.
+		n_in corresponds to the "b" cell of the 2x2 contingency table from Fisher.
+		p_out corresponds to the "c" cell of the 2x2 contingency table from Fisher.
+		n_out corresponds to the "d" cell of the 2x2 contingency table from Fisher. 
+			(Although "d" is estimated as 20000 - a - b - c in our actual Fisher() function.)
+		
+		Information gain is calculated as the information needed to receive the message contained in the starting node,
+			minus the weighted average of information needed to receive the messages contained in the two nodes 
+			resulting from the split on the feature library tf, _in and _out.
+			(The weight is the size of the node.)
+		Because the starting information is same for each split, it is sufficient to use the weighted average
+			for the two resulting nodes as the score. 
+		'''
+		results[column] = ((p_in + n_in) * Info(p_in, n_in, info_metric) + (p_out + n_out) * Info(p_out, n_out, info_metric)) / (p + n)
+	return(list(results))

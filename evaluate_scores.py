@@ -3,11 +3,13 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from get_scores import clean
-from math import sqrt, ceil
 from sklearn.metrics import auc
 from joblib import Parallel, delayed
 from collections import Counter
 from setup import open_csv
+
+### NEED TO FIX COMMENTS
+
 
 def plot_curve(df, col, prefix):
 	'''
@@ -24,7 +26,11 @@ def plot_curve(df, col, prefix):
 	#Scale the x_vals here
 	x_vals = [a/len(df[name + ',x']) for a in df[name + ',x']]
 	y_vals = df[name + ',y']
-	plt.plot(x_vals, y_vals, label=prefix + ' ' + name 
+	if name == 'Fisher': 
+		plt.plot(x_vals, y_vals, label=prefix + ' ' + name 
+		+ '    ' + 'AUC: ' + str(np.round(auc(x_vals, y_vals), 4)), linewidth=3, color='black')
+	else:
+		plt.plot(x_vals, y_vals, label=prefix + ' ' + name 
 		+ '    ' + 'AUC: ' + str(np.round(auc(x_vals, y_vals), 4)))
 
 def pairwise_plots(pair):
@@ -92,7 +98,8 @@ def pairwise_plots(pair):
 	#Load saved plot coordinates, if any.
 	if os.path.isfile(rank_fname): agg_c = pd.read_csv(rank_fname, sep='\t', index_col=0)
 	else: agg_c = pd.DataFrame()
-
+	#agg_c = pd.DataFrame()
+	
 	#Get the rankings from each enrichment method.
 	agg_r = pd.DataFrame()
 	for file in os.listdir(os.getcwd()):
@@ -117,19 +124,20 @@ def pairwise_plots(pair):
 			x, y, hits, coords = get_bridge_coords(agg_r[column].values, ranks_range, n_rankings)
 			agg_c[column + ',x']=x
 			agg_c[column + ',y']=y
+		agg_c.index=range(len(x))
 	#Save the plot coordinate file.
 	agg_c.to_csv(rank_fname, sep='\t')
 
 	#Plot the results for all enrichment methods, if any.
 	if not agg_c.empty:
-		plt.figure(1, figsize=(10,10))
+		plt.figure(1, figsize=(5,5))
 		font = {'size': 11}
 		plt.rc('font', **font)
 		#Plot each enrichment method.
 		for column in agg_c:
 			col = (column.partition(',')[0], column.partition(',')[2])
 			#Filter for only certain enrichment methods here using the if statement.
-			if col[1] == 'x' and (col[0] in ['Fisher','CombinedFF', 'RandomForest', 'CombinedFF2']):
+			if col[1] == 'x' and ('zzz' in col[0] or col[0] in ['Fisher', 'Z', 'Combined']):
 				plot_curve(agg_c, col, '')
 		plt.title(pair['l'].replace('_up', '_up/dn') + ' to ' + pair['f'].replace('_up', '_up/dn') + ' Bridge Plot')
 		plt.xlabel('Rank')
@@ -146,7 +154,7 @@ def combined_plot(lib_df_pairs):
 	lib_df_pairs : dict
 		keys are names of the gmt libraries; values are their dfs. 
 	'''
-	plt.figure(2, figsize=(12,12))
+	plt.figure(2, figsize=(10,10))
 	font = {'size': 12}
 	plt.rc('font', **font)
 	for pair in lib_df_pairs:
@@ -157,7 +165,7 @@ def combined_plot(lib_df_pairs):
 			for column in agg_c:
 				col = (column.partition(',')[0], column.partition(',')[2])
 				#Filter for only certain enrichment methods here using the if statement.
-				if col[1] == 'x' and (col[0] in ['Fisher','RandomForest']):
+				if col[1] == 'x' and (col[0] in ['Fisher','Control', 'RandomForest']):
 					plot_curve(agg_c, col, prefix)
 	plt.title(pair['l'].replace('_up', '_up/dn') + ' to ' + pair['f'].replace('_up', '_up/dn') + ' Bridge Plot')
 	plt.xlabel('Rank')
@@ -175,8 +183,8 @@ def subplots(lib_pairs, all_libs):
 	all_libs : list-like
 		the gmt libraries in lib_pairs
 	'''
-	f, axarr = plt.subplots(nrows=len(all_libs),ncols=len(all_libs), figsize=(8,7))
-	font = {'size':11}
+	f, axarr = plt.subplots(nrows=len(all_libs),ncols=len(all_libs), figsize=(7,7))
+	font = {'size':10}
 	plt.rc('font', **font)
 
 	#IMPORTANT: this only works if each lib_pair has the EXACT same plots, e.g. Fisher and Control.
@@ -197,18 +205,39 @@ def subplots(lib_pairs, all_libs):
 					for column in agg_c:
 						col = (column.partition(',')[0], column.partition(',')[2])
 						#Use the 'if' statement below to filter out which results you want to view.
-						if col[1] == 'x' and (col[0] in ['Fisher','RandomForest', 'Control', 'CombinedFF']):
+						if col[1] == 'x' and ('xxx' in col[0] or col[0] in ['Fisher', 'Control', 'RandomForest', 'XGBoost','ExtraTrees']):
 							name = col[0] 
 							x_vals = [a/len(agg_c[name + ',x']) for a in agg_c[name + ',x']]
 							y_vals = agg_c[name + ',y']
-							methods[name] = subplot.plot(x_vals, y_vals, label= name)
-			subplot.set_ylim([-.1,.4])
+							if name == 'Fisher': 
+								methods[name] = subplot.plot(x_vals, y_vals, label=name, color='black')
+							elif name == 'Control':
+								methods[name] = subplot.plot(x_vals, y_vals, label=name, color='gray')
+							elif name == 'RandomForest':
+								methods[name] = subplot.plot(x_vals, y_vals, label=name, color='C0')
+							elif name == 'AdaBoost':
+								methods[name] = subplot.plot(x_vals, y_vals, label=name, color='C1')
+							elif name == 'ExtraTrees':
+								methods[name] = subplot.plot(x_vals, y_vals, label=name, color='C2')
+							elif name == 'GradientBoosting':
+								methods[name] = subplot.plot(x_vals, y_vals, label=name, color='C3')
+							elif name == 'XGBoost':
+								methods[name] = subplot.plot(x_vals, y_vals, label=name, color='C4')
+							elif name == 'RandomTreesEmbedding':
+								methods[name] = subplot.plot(x_vals, y_vals, label=name, color='C5')
+							elif name == 'Z':
+								methods[name] = subplot.plot(x_vals, y_vals, label=name, color='C9')
+							else:	
+								methods[name] = subplot.plot(x_vals, y_vals, label= name)
+			#subplot.set_ylim([-.1,.4])
 			#uncomment below to see just top 10%.
-			#subplot.set_xlim([0,.1])
+			#subplot.set_xlim([0,.10])
 			#Only show y-axis on left-most plots.
 			if j != 0: subplot.yaxis.set_visible(False)
+			if j == 2 and i == 2: plt.axis('off')
 			#Do not show ticks -- although axis='both', this only seems to affect the x-axis.
 			subplot.tick_params(axis='both', which='both', bottom='off', top='off',labelbottom='off')
+			subplot.axes.get_yaxis().set_ticks([])
 
 	#Label the rows and columns of the figure
 	lib_titles = [x.replace('Single_Gene_Perturbations_from_GEO_up', 'CREEDS_up/dn_sep') for x in all_libs]
@@ -217,8 +246,8 @@ def subplots(lib_pairs, all_libs):
 	#Leave some space between the subplots
 	f.subplots_adjust(hspace=.15, wspace=.1)
 	#Create a legend in the last cell (should be empty, as it is a diagonal).
-	plt.legend([x for sublist in methods.values for x in sublist], methods.index)
-	plt.suptitle('Bridge Plots From "Row" to "Column", Top 10 Percentile', fontsize=15)
+	plt.legend([x for sublist in methods.values for x in sublist], methods.index, loc=3)
+	plt.suptitle('Bridge plots from [row] to [column]', fontsize=14)
 	plt.show()
 	return methods
 
@@ -247,8 +276,8 @@ def hexbin_method_comparison(libs, m1, m2):
 		x,y = zip(*coords_collection)
 		return x,y
 
-	f, axarr = plt.subplots(nrows=len(libs),ncols=len(libs), figsize=(9,9))
-	font = {'size':11}
+	f, axarr = plt.subplots(nrows=len(libs),ncols=len(libs), figsize=(10,10))
+	font = {'size':8}
 	plt.rc('font', **font)
 
 	#Create the grid by iterating over libs.
@@ -273,7 +302,7 @@ def hexbin_method_comparison(libs, m1, m2):
 	for ax, col in zip(axarr[0], lib_titles): ax.set_title(col)
 	for ax, row in zip(axarr[:,0], lib_titles): ax.set_ylabel(row, size='large')
 	f.subplots_adjust(hspace=.03, wspace=.03)
-	plt.suptitle('HexBin Plots, ' + m1 + ' (x) to ' + m2 + ' (y)', fontsize=15)
+	plt.suptitle('HexBin Plots, ' + m1 + ' (x) to ' + m2 + ' (y)', fontsize=12)
 	plt.show()
 	return 
 
@@ -285,7 +314,8 @@ if __name__ == '__main__':
 	all_pairs = lib_pairs + CREEDS_sep_pairs
 	all_libs = ['Single_Gene_Perturbations_from_GEO_up'] + libs
 	os.chdir('results')
-	#Parallel(n_jobs=1, verbose=0)(delayed(pairwise_plots)(pair) for pair in all_pairs)
+	Parallel(n_jobs=1, verbose=0)(delayed(pairwise_plots)(pair) for pair in all_pairs)
 	#combined_plot(all_pairs)
-	#subplots(lib_pairs, libs)
-	hexbin_method_comparison(libs, 'Fisher', 'RandomForest')
+	subplots(lib_pairs, libs)
+	#hexbin_method_comparison(libs, 'Fisher', 'InfoGainGini')
+

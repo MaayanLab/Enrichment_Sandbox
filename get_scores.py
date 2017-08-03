@@ -37,16 +37,18 @@ def get_methods_and_params(l,f, l_name, f_name):
 
 	#Get the ARCHS4 correlation data.
 	#This section is only necessary if FisherAdjusted is used.
-	os.chdir('..')
-	os.chdir('libs')
-	ARCHS4 = h5py.File(l_name + '_ARCHS4_corr.h5', 'r+')
-	os.chdir('..')
-	os.chdir('results')
-	h_genes = ARCHS4['human']['meta']['genes']
-	m_genes = ARCHS4['mouse']['meta']['genes']
-	ARCHS4_genes_dict = {'human': pd.Series(np.arange(len(h_genes)), index=h_genes[...]),
-		'mouse': pd.Series(np.arange(len(m_genes)), index=m_genes[...])}
-	ARCHS4.close()
+	#This must be commented out if using a lib for which 
+		#the ARCHS4 correlation files have not been created.
+	# os.chdir('..')
+	# os.chdir('libs')
+	# ARCHS4 = h5py.File(l_name + '_ARCHS4_corr.h5', 'r+')
+	# os.chdir('..')
+	# os.chdir('results')
+	# h_genes = ARCHS4['human']['meta']['genes']
+	# m_genes = ARCHS4['mouse']['meta']['genes']
+	# ARCHS4_genes_dict = {'human': pd.Series(np.arange(len(h_genes)), index=h_genes[...]),
+	# 	'mouse': pd.Series(np.arange(len(m_genes)), index=m_genes[...])}
+	# ARCHS4.close()
 
 	#(Define any other variables, as necessary, here.)
 	train_group = f
@@ -62,13 +64,13 @@ def get_methods_and_params(l,f, l_name, f_name):
 	df = pd.DataFrame(index=['func', 'params'])
 	#df['Control'] = [m.Control, ([f.columns.values])]
 	#df['Fisher'] = [m.Fisher, ([f])]
-	df['FAV'] = [m.FisherAdjusted, (f, l_name, f_name, ARCHS4_genes_dict)]
+	#df['FAV'] = [m.FisherAdjusted, (f, l_name, f_name, ARCHS4_genes_dict)]
 	#df['ZAndCombined'] = [m.ZAndCombined, (f_name, f.columns.values)]
 	#df['RandomForest'] = [m.ML_wrapper, (RandomForestClassifier, train_group, features, 73017)]
 	#df['GradientBoosting'] = [m.ML_wrapper, (GradientBoostingClassifier, train_group, features, 73017)]
 	#df['RandomForest_mf_log2'] = [m.ML_wrapper_adjusted, (RandomForestClassifier, train_group, features, 73017, 'log2', None)]
 	#df['RandomForest_cw_balanced'] = [m.ML_wrapper_adjusted, (RandomForestClassifier, train_group, features, 73017, 'auto', 'balanced')]
-
+	df['ForestDrop5'] = [m.ML_iterative, (RandomForestClassifier, 5, train_group, features, 73017)]
 	return df
 
 def enrichment_wrapper(pair):
@@ -123,7 +125,7 @@ def enrichment_wrapper(pair):
 	return
 
 if __name__ == '__main__':
-	all_libs = ['CREEDS', 'ENCODE_TF_ChIP-seq_2015', 'ChEA_2016']
+	all_libs = ['CREEDS_Drugs', 'DrugBank']
 
 	#Get dataframes of each gmt library in all_libs
 	os.chdir('libs')
@@ -134,4 +136,4 @@ if __name__ == '__main__':
 
 	#Iterate over each gmt pair.
 	lib_df_pairs = [{'l':all_dfs[a], 'f':all_dfs[b]} for a in all_libs for b in all_libs if a != b]
-	Parallel(n_jobs=6, verbose=0)(delayed(enrichment_wrapper)(pair)for pair in lib_df_pairs)
+	Parallel(n_jobs=1, verbose=0)(delayed(enrichment_wrapper)(pair)for pair in lib_df_pairs)
