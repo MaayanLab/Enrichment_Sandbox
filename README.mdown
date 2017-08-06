@@ -1,10 +1,8 @@
 # Project Summary
 
-The purpose of this project is to evaluate new algorithms for enrichment analysis. This is done by benchmarking the algorithms using either transcription factor-to-gene or drug-to-gene libraries. 
+The purpose of this project is to evaluate new algorithms for enrichment analysis: the process of identifying known gene sets which are over-represented within a givin sample of genes. This is done by performing enrichment between either transcription factor-to-gene or drug-to-gene libraries. 
 
-The benchmarking process is as follows: Two libraries, A and B, are chosen. Terms which are in both libraries are identified. Then, the gene sets of those common terms from library A are used to perform enrichment into library B. For each common term in library A, the algorithm returns a ranking of all terms in library B, from most enriched to least enriched. The quality of the enrichment algorithm is then determined by how consistently it marks library B terms which are identical to the input library A term as "enriched." 
-
-(In the case of transcription factors, these terms are either transcription factor binding sites from ChIP-seq experiments, or single-gene perturbation signatures from Gene Expression Omnibus. In the case of drugs, the terms are either drug targets from DrugBank, or drug pertubration signatures from Gene Expression Omnibus.) 
+The benchmarking process is as follows: Two libraries, A and B, are chosen. Terms which correspond to transcription factors (or drugs) which are in both libraries are identified. Then, the gene sets of those common terms from library A are used to perform enrichment into library B. For each common term in library A, the algorithm returns a ranking of all terms in library B, from most enriched to least enriched. Since these libraries should agree with one another, we expect that the library B term(s) corresponding to the same transcription factor (or drug) as the input term from library A will appear towards the top of the rankings.
 
 ## The following methods have been implemented:
 * A control
@@ -37,6 +35,16 @@ Currently, visualization of drug-to-gene library benchmarking is not yet complet
 <img src="sample_result_hexbin.png"/>
 <img src="sample_result_grid.png"/>
 </div>
+
+## The following libraries are being used for benchmarking:
+
+* Transcription factor libraries:
+** ChEA: ChIP-seq experiments
+** ENCODE: ChIP-seq experiments
+** CREEDS: single-gene perturbation signatures from the Gene Expression Omnibus
+* Drug libraries:
+** DrugBank:
+** CREEDS: drug perturbation signatures from the Gene Expression Omnibus
 
 # How to Use:
 
