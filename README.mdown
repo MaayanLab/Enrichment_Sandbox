@@ -12,7 +12,7 @@ The benchmarking process is as follows: Two libraries, A and B, are chosen. Term
 * Binomial proportions test
 * Z score and Combined score from the Enrichr API
 * Gini Impurity and Entropy
-* RandomForest, ExtraTrees, IsolationForest, GradientBoosting and AdaBoost from scikit-learn.ensemble
+* RandomForest, ExtraTrees, RandomTreesEmbedding, GradientBoosting and AdaBoost from scikit-learn.ensemble
 * XGBoost from the DMLC
 * Recursive variants of the above machine learning methods
 * Combination of Fisher's exact test and the above machine learning methods
