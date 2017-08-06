@@ -9,11 +9,14 @@ The benchmarking process is as follows: Two libraries, A and B, are chosen. Term
 ## The following methods have been implemented:
 * A control
 * Fisher's exact test
-* An adjusted Fisher's exact test which uses gene-gene correlation data from ARCHS4
-* RandomForest, ExtraTrees, IsolationForest, GradientBoosting and AdaBoost from scikit-learn
-* Recursive variants of the above scikit-learn methods
-* Combination of Fisher's exact test and above scikit-learn methods
-* Z score and Combined score from Enrichr API
+* Binomial proportions test
+* Z score and Combined score from the Enrichr API
+* Gini Impurity and Entropy
+* RandomForest, ExtraTrees, IsolationForest, GradientBoosting and AdaBoost from scikit-learn.ensemble
+* XGBoost from the DMLC
+* Recursive variants of the above machine learning methods
+* Combination of Fisher's exact test and the above machine learning methods
+* *In progress: Fisher's exact test adjusted with gene-gene correlation data from ARCHS4*
 
 ## The following visualizations are available:
 * Bridge plot for a library pair, comparing the rankings of different methods
@@ -39,13 +42,13 @@ Currently, visualization of drug-to-gene library benchmarking is not yet complet
 
 1. Run `setup.py`.
 2. `get_rankings.py` has a function called `get_methods()`. In here, fill a `pandas.DataFrame` with functions and parameters from `enrichment_methods.py` which you want to use. Then, run `get_rankings.py`.
-3. Run `evaluate_rankings.py` to plot the results.
-
-
+3. Run `evaluate_rankings.py` to save ranking scores to results files and plot them.
+* `fix.py` can be used to make adjustments such as renaming methods, reversing scores, and resetting the results files.
+* `newscoresfromold.py` can be used to create new scores from old score files.
 
 # More details:
 
-(Note: If drugs are being used, simply replace "transcription factor" with "drug" in all the following passages.)
+(Note: If drugs are being used, simply replace "transcription factor" with "drug" in the following passages.)
 
 
 ### What happens behind the scenes, in pseudocode:
@@ -61,8 +64,8 @@ Currently, visualization of drug-to-gene library benchmarking is not yet complet
 		* For each label library transcription factor:
 			* Perform enrichment by inputting this label library transcription factor's gene set into the whole feature library.
 			* The output is a list of enrichment scores for each experiment in the feature library.
-		* The list of list of enrichment scores is stored as a matrix in a .csv file.
-		* (Columns: label library transcription factors. Indices: feature library experiments. Cell values: scores given by the enrichment method.)
+			* Save this output as a column in a dataframe. 
+		* The dataframe is stored as a `.csv` file. (Columns: label library transcription factors. Indices: feature library experiments. Cell values: scores given by the enrichment method.) Example: `from_ChEA_2016_to_CREEDS_Fisher.csv`
 
 3. **`evaluate_scores.py`**
 * For each `(label, feature)` pair of gmt libraries:
@@ -70,7 +73,7 @@ Currently, visualization of drug-to-gene library benchmarking is not yet complet
 	* For each corresponding `.csv file` (i.e., for each method):
 		* For each column (i.e., for each label library transcription factor):
 			* The ranks for experiments which correspond to the same transcription factor used to perform enrichment are aggregated.
-		* The coordinates of the bridge plot are generated.
+		* The coordinates of the bridge plot are generated, and saved to the rankings file. Example: `rankings_from_ChEA_2016_to_CREEDS.csv`
 * Methods are grouped as desired (for example, by library or enrichment algorithm), then plotted.
 
 
@@ -97,10 +100,10 @@ In other words, we take each tf from the `label library`, and perform enrichment
 ### Construction and interpretation of the bridge plots:
 ![Sample result AUC](sample_result_auc.png?raw=true)
 * The ranks of the "matching" experiments are collected.
-* At every x-value, the y-value decreases at a constant rate.
+* At every x-value after zero, the y-value decreases at a constant rate.
 * At every x-value, the y value also increases proportionally to the number of "matching" ranks which occured at that x-value.
 * The decrease and increase constants are scaled such that they cancel out, and the curve ends at y=0.
-* The y-axis is scaled such that the highest y-value possible (if all ranks occured at x=0) is one.
+* The y-axis is scaled such that the highest y-value possible (if all ranks occured at x=0) is 1.
 * The x-axis is scaled such that all the ranks are between one and zero.
 * The result is a curve whose null-distribution is similar, but not identical, to a Brownian bridge. 
 
