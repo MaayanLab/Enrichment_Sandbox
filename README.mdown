@@ -22,11 +22,9 @@ The benchmarking process is as follows: Two libraries, A and B, are chosen. Term
 * Combined bridge plot showing all results for all library pairs.
 * An array of bridge plots, with each library pair in its own subplot.
 * An array of hexbin plots (a kind of bivariate histogram), with each library pair in its own subplot.
-	* These are useful for comparing the matching term rankings for two different methods.
+	* These are useful for comparing how two different algorithms rank the same matches.
 
 The bridge plots can be zoomed-in to view only the top ranks, and filtered to view only certain methods.
-
-Currently, visualization of drug-to-gene library benchmarking is not yet complete. 
 
 <div style="display:inline">
 <img src="sample_result_sklearn.png"/>
@@ -50,15 +48,16 @@ Currently, visualization of drug-to-gene library benchmarking is not yet complet
 # How to Use:
 
 1. Run `setup.py`.
-2. `get_rankings.py` has a function called `get_methods()`. In here, fill a `pandas.DataFrame` with functions and parameters from `enrichment_methods.py` which you want to use. Then, run `get_rankings.py`.
-3. Run `evaluate_rankings.py` to save ranking scores to results files and plot them.
+2. `get_scores.py` has a function called `get_methods()`. In here, fill a `pandas.DataFrame` with functions and parameters from `enrichment_methods.py` which you want to use. Then, run `get_scores.py`.
+3. Run `evaluate_scores.py` to save ranking scores to results files and plot them.
 * `fix.py` can be used to make adjustments such as renaming methods, reversing scores, and resetting the results files.
-* `newscoresfromold.py` can be used to create new scores from old score files.
+* `new_scores_from_old.py` can be used to create new scores from old score files.
+* `log.py` is a log of experiments I've personally done, for my own reference. 
+* *In progress: `get_fisher_adjusted_vars.py` is used to get and view the correlation data for the adjusted Fisher's test.*
 
 # More details:
 
 (Note: If drugs are being used, simply replace "transcription factor" with "drug" in the following passages.)
-
 
 ### What happens behind the scenes, in pseudocode:
 
@@ -116,4 +115,6 @@ In other words, we take each tf from the `label library`, and perform enrichment
 * The x-axis is scaled such that all the ranks are between one and zero.
 * The result is a curve whose null-distribution is similar, but not identical, to a Brownian bridge. 
 
-A good ranking method will result in a curve with a large area underneath it (AUC), and with a tall supremum occuring at a low x-value. (In the best possible outcome, where all ranks occur at x=0, the curve will be an isosceles right triangle with AUC=.5 and supremum of 1 at x=0.)
+You can interpret the bridge plot as a cdf turned 45 degrees counter-clockwise. 
+
+A good ranking method will result in a bridge plot with a large area underneath it (AUC), and with a tall supremum occuring at a low x-value. (In the best possible outcome, where all ranks occur at x=0, the curve will be an isosceles right triangle with AUC=.5 and supremum of 1 at x=0.)
