@@ -22,7 +22,7 @@ The benchmarking process is as follows: Two libraries, A and B, are chosen. Term
 * Combined bridge plot showing all results for all library pairs.
 * An array of bridge plots, with each library pair in its own subplot.
 * An array of hexbin plots (a kind of bivariate histogram), with each library pair in its own subplot.
-** These are useful for comparing the matching term rankings for two different methods.
+	* These are useful for comparing the matching term rankings for two different methods.
 
 The bridge plots can be zoomed-in to view only the top ranks, and filtered to view only certain methods.
 
@@ -40,12 +40,12 @@ Currently, visualization of drug-to-gene library benchmarking is not yet complet
 ## The following libraries are being used for benchmarking:
 
 * Transcription factor libraries:
-** ChEA: ChIP-seq experiments
-** ENCODE: ChIP-seq experiments
-** CREEDS: single-gene perturbation signatures from the Gene Expression Omnibus
+	* ChEA: ChIP-seq experiments
+	* ENCODE: ChIP-seq experiments
+	* CREEDS: single-gene perturbation signatures from the Gene Expression Omnibus
 * Drug libraries:
-** DrugBank: drug-to-drug target library
-** CREEDS: drug perturbation signatures from the Gene Expression Omnibus
+	* DrugBank: drug-to-drug target library
+	* CREEDS: drug perturbation signatures from the Gene Expression Omnibus
 
 # How to Use:
 
