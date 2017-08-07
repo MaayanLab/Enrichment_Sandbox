@@ -3,18 +3,22 @@ import pandas as pd
 
 #========================================================================================================
 '''
-The purpose of this script is to adjust the score files for a certain method.
+The purpose of this script is to adjust the score or ranking files for a certain method.
 '''
 #========================================================================================================
 
 def rename(str_to_change, new_str):
+	'''
+	Replaces str_to_change to new_str for all score files. 
+	You should call remove_old_methods_from_ranking_files() after.
+	'''
 	for x in os.listdir(os.getcwd()):
 		if (str_to_change) in x: os.rename(x, x.replace(str_to_change, new_str))
 
-
 def invert(method):
 	'''
-	This may be useful if you write a method where highest scores are the best. 
+	Takes the negation of all scores in score files for the given method.
+	This may be useful if you accidentally write a method where highest scores are the best. 
 	(evaluate_scores.py will always reward low scores.)
 	'''
 	for x in os.listdir(os.getcwd()):
@@ -26,6 +30,7 @@ def invert(method):
 			f.to_csv(x, sep='\t')
 
 def remove_old_methods_from_ranking_files():
+	'''For all ranking files, removes cols corresponding to methods which do not have score files.'''
 	for x in os.listdir(os.getcwd()):
 		if 'rankings_from_' in x:
 			f = pd.read_csv(x, sep='\t', index_col=0)
@@ -35,6 +40,7 @@ def remove_old_methods_from_ranking_files():
 			f.to_csv(x, sep='\t')
 
 def remove_this_method_from_ranking_files(method):
+	'''For all ranking files, removes cols corresponding to the specified method.'''
 	for x in os.listdir(os.getcwd()):
 		if 'rankings_from_' in x:
 			f = pd.read_csv(x, sep='\t', index_col=0)
@@ -46,6 +52,6 @@ def remove_this_method_from_ranking_files(method):
 os.chdir('results')
 
 #invert('InfoGainEntropy')
-remove_this_method_from_ranking_files('ExtraTrees')
+#remove_this_method_from_ranking_files('ExtraTrees')
 #rename('Classifier','')
 #remove_old_methods_from_ranking_files()

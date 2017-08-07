@@ -10,18 +10,19 @@ The benchmarking process is as follows: Two libraries, A and B, are chosen. Term
 * Binomial proportions test
 * Z score and Combined score from the Enrichr API
 * Gini Impurity and Entropy
-* RandomForest, ExtraTrees, RandomTreesEmbedding, GradientBoosting and AdaBoost from scikit-learn.ensemble
+* RandomForest, ExtraTrees, RandomTreesEmbedding, GradientBoosting and AdaBoost from sklearn.ensemble
+* LinearSVC from sklearn.svm
 * XGBoost from the DMLC
 * Recursive variants of the above machine learning methods
 * Combination of Fisher's exact test and the above machine learning methods
 * *In progress: Fisher's exact test adjusted with gene-gene correlation data from ARCHS4*
 
 ## The following visualizations are available:
-* Bridge plot for a library pair, comparing the rankings of different methods
-* Combined bridge plot showing all results for all library pairs
-* An array of bridge plots, with each library pair in its own subplot
-* Hexagon binning plot (a kind of bivariate histogram) for a library pair, comparing the matching term rankings for two different methods
-* An array of hexbin plots, with each library pair in its own subplot
+* Bridge plot for a library pair, comparing the rankings of different methods.
+* Combined bridge plot showing all results for all library pairs.
+* An array of bridge plots, with each library pair in its own subplot.
+* An array of hexbin plots (a kind of bivariate histogram), with each library pair in its own subplot.
+** These are useful for comparing the matching term rankings for two different methods.
 
 The bridge plots can be zoomed-in to view only the top ranks, and filtered to view only certain methods.
 
@@ -43,7 +44,7 @@ Currently, visualization of drug-to-gene library benchmarking is not yet complet
 ** ENCODE: ChIP-seq experiments
 ** CREEDS: single-gene perturbation signatures from the Gene Expression Omnibus
 * Drug libraries:
-** DrugBank:
+** DrugBank: drug-to-drug target library
 ** CREEDS: drug perturbation signatures from the Gene Expression Omnibus
 
 # How to Use:

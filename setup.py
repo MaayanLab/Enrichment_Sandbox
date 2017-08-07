@@ -8,7 +8,7 @@ from joblib import Parallel, delayed
 
 def open_csv(transformed_gmt_file):
 	return pd.read_csv(transformed_gmt_file, 
-		index_col=0, sep='\t', low_memory=False, keep_default_na=False)
+		index_col=0, sep='\t', low_memory=False, keep_default_na=False, encoding='Latin-1')
 
 def file_exists(f_name):
 	'''Checks if a file exists in the directory, printing a statement if so.'''
@@ -40,8 +40,10 @@ def convert_gmt(output_type, lib_name):
 			tf = row[0]
 			print(tf)
 			if tf not in MY_NA_VALS:
-				#Remove delimiting string and do not accept null values
+				#Remove delimiting string and do not accept null values.
 				genes = [str(x).replace(',1.0', '') for x in row[2:] if str(x).replace(',1.0', '') not in MY_NA_VALS]
+				#Below line needed if repeats in genes. Else, comment out for speed.
+				genes = set(genes)
 				s = pd.DataFrame(True, index = genes, columns = [tf], dtype=bool)
 				df = pd.concat([df,s], axis=1)
 		df.index.name = lib_name

@@ -7,6 +7,7 @@ import enrichment_methods as m
 from setup import convert_gmt
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, \
 	RandomTreesEmbedding, AdaBoostClassifier, ExtraTreesClassifier
+from sklearn.svm import LinearSVC
 import h5py
 
 def clean(tf):
@@ -20,6 +21,23 @@ def get_overlaps(label_tfs, feature_tfs):
 	'''
 	cleaned_overlaps = {clean(x) for x in feature_tfs} & {clean(x) for x in label_tfs}
 	l_in_overlaps = [x for x in label_tfs if clean(x) in cleaned_overlaps]
+	return l_in_overlaps
+
+def clean_CREEDS_Drugs(drug):
+	'''Like clean(), but for drugs.'''
+	return str(drug).partition(' GSE')[0].partition(' ')[0].partition(' ')[0].upper()
+
+def get_drug_overlaps(pair):
+	'''Returns a list of label library experiments whose corresponding drugs are also in any feature library experiment.'''
+	if pair['l'].index.name == 'CREEDS_Drugs': creeds, drugbank = pair['l'], pair['f']
+	else: drugbank, creeds = pair['l'], pair['f']
+	print(creeds.shape, drugbank.shape)
+
+	label_drugs = pair['l'].columns.values
+
+	cleaned_overlaps = {str(x).upper() for x in drugbank.columns.values} & {clean_CREEDS_Drugs(x) for x in creeds.columns.values}
+	if pair['l'].index.name == 'CREEDS_Drugs': l_in_overlaps = [x for x in label_drugs if clean_CREEDS_Drugs(x) in cleaned_overlaps]
+	else: l_in_overlaps = [x for x in label_drugs if x.upper() in cleaned_overlaps]
 	return l_in_overlaps
 
 def get_methods_and_params(l,f, l_name, f_name):
@@ -63,14 +81,20 @@ def get_methods_and_params(l,f, l_name, f_name):
 	#=====================================================================================================================================
 	df = pd.DataFrame(index=['func', 'params'])
 	#df['Control'] = [m.Control, ([f.columns.values])]
-	#df['Fisher'] = [m.Fisher, ([f])]
+	df['newFisher'] = [m.newFisher, ([f])]
+	df['Impurity_Entropy'] = [m.Impurity, (f, 'Entropy')]
+	df['Impurity_Gini'] = [m.Impurity, (f, 'Gini')]
 	#df['FAV'] = [m.FisherAdjusted, (f, l_name, f_name, ARCHS4_genes_dict)]
 	#df['ZAndCombined'] = [m.ZAndCombined, (f_name, f.columns.values)]
 	#df['RandomForest'] = [m.ML_wrapper, (RandomForestClassifier, train_group, features, 73017)]
 	#df['GradientBoosting'] = [m.ML_wrapper, (GradientBoostingClassifier, train_group, features, 73017)]
 	#df['RandomForest_mf_log2'] = [m.ML_wrapper_adjusted, (RandomForestClassifier, train_group, features, 73017, 'log2', None)]
 	#df['RandomForest_cw_balanced'] = [m.ML_wrapper_adjusted, (RandomForestClassifier, train_group, features, 73017, 'auto', 'balanced')]
-	df['ForestDrop5'] = [m.ML_iterative, (RandomForestClassifier, 5, train_group, features, 73017)]
+	#df['ForestDrop5'] = [m.ML_iterative, (RandomForestClassifier, 5, train_group, features, 73017)]
+	#df['ForestFisherCutoffV2.5'] = [m.ML_fisher_cutoff_V2, (RandomForestClassifier, .5, train_group, features, 73017)]
+	#df['ForestFisherCutoffV2.25'] = [m.ML_fisher_cutoff_V2, (RandomForestClassifier, .25, train_group, features, 73017)]
+	#df['ForestFisherCutoffV2.10'] = [m.ML_fisher_cutoff_V2, (RandomForestClassifier, .10, train_group, features, 73017)]
+	#df['ForestFisherCutoffV2.05'] = [m.ML_fisher_cutoff_V2, (RandomForestClassifier, .05, train_group, features, 73017)]
 	return df
 
 def enrichment_wrapper(pair):
@@ -81,8 +105,9 @@ def enrichment_wrapper(pair):
 	l_name, f_name = pair['l'].index.name, pair['f'].index.name
 	print('Beginning enrichment analysis from', l_name, 'to', f_name)
 
-	#Get the label library experiments whose transcription factors are also in any feature library experiment.
-	overlaps = get_overlaps(pair['l'].columns.values, pair['f'].columns.values)
+	#Get the label library experiments whose transcription factors (or drugs) are also in any feature library experiment.
+	if 'Drugs' in l_name: overlaps = get_drug_overlaps(pair)
+	else: overlaps = get_overlaps(pair['l'].columns.values, pair['f'].columns.values)
 
 	#Get the methods and parameters with which to perform enrichment. 
 	methods_and_params = get_methods_and_params(pair['l'], pair['f'], l_name, f_name)
@@ -125,7 +150,7 @@ def enrichment_wrapper(pair):
 	return
 
 if __name__ == '__main__':
-	all_libs = ['CREEDS_Drugs', 'DrugBank']
+	all_libs = ['DrugBank','CREEDS_Drugs']
 
 	#Get dataframes of each gmt library in all_libs
 	os.chdir('libs')
@@ -136,4 +161,4 @@ if __name__ == '__main__':
 
 	#Iterate over each gmt pair.
 	lib_df_pairs = [{'l':all_dfs[a], 'f':all_dfs[b]} for a in all_libs for b in all_libs if a != b]
-	Parallel(n_jobs=1, verbose=0)(delayed(enrichment_wrapper)(pair)for pair in lib_df_pairs)
+	Parallel(n_jobs=2, verbose=0)(delayed(enrichment_wrapper)(pair)for pair in lib_df_pairs)
