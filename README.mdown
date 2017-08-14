@@ -1,6 +1,6 @@
 # Project Summary
 
-The purpose of this project is to evaluate new algorithms for enrichment analysis: the process of identifying known gene sets which are over-represented within a givin sample of genes. This is done by performing enrichment between either transcription factor-to-gene or drug-to-gene libraries. 
+The purpose of this project is to evaluate new algorithms for enrichment analysis: the process of identifying known gene sets whose genes are over-represented within a given sample of genes. This is done by performing enrichment between either transcription factor-to-gene or drug-to-gene libraries. 
 
 The benchmarking process is as follows: Two libraries, A and B, are chosen. Terms which correspond to transcription factors (or drugs) which are in both libraries are identified. Then, the gene sets of those common terms from library A are used to perform enrichment into library B. For each common term in library A, the algorithm returns a ranking of all terms in library B, from most enriched to least enriched. Since these libraries should agree with one another, we expect that the library B term(s) corresponding to the same transcription factor (or drug) as the input term from library A will appear towards the top of the rankings. So a good algorithm will consistently rank matching terms highly, while a bad algorithm will not. Bridge plots are created to qualitatively evaulate this.
 
@@ -13,9 +13,11 @@ The benchmarking process is as follows: Two libraries, A and B, are chosen. Term
 * RandomForest, ExtraTrees, RandomTreesEmbedding, GradientBoosting and AdaBoost from sklearn.ensemble
 * LinearSVC from sklearn.svm
 * XGBoost from the DMLC
+** Above machine learning methods use feature importances to rank gene sets based on a classifier which predicts whether genes in the library also belong to the input gene set
 * Recursive variants of the above machine learning methods
-* Combination of Fisher's exact test and the above machine learning methods
-* *In progress: Fisher's exact test adjusted with gene-gene correlation data from ARCHS4*
+* Mixtures of the above methods, i.e. score averaging, gene set elimination.
+* Above machine learning methods, but using a classifier that predicts whether or not a gene set is enriched based on Fisher contingency table values and other scores (e.g. Fisher p value, Gini impurity)
+* *Deprecated: Fisher's exact test adjusted with gene-gene correlation data from ARCHS4* 
 
 ## The following visualizations are available:
 * Bridge plot for a library pair, comparing the rankings of different methods.
@@ -53,7 +55,8 @@ The bridge plots can be zoomed-in to view only the top ranks, and filtered to vi
 * `fix.py` can be used to make adjustments such as renaming methods, reversing scores, and resetting the results files.
 * `new_scores_from_old.py` can be used to create new scores from old score files.
 * `log.py` is a log of experiments I've personally done, for my own reference. 
-* *In progress: `get_fisher_adjusted_vars.py` is used to get and view the correlation data for the adjusted Fisher's test.*
+* `get_classifiers.py` is a helper function needed if a `ML_Fisher_features` method is used. 
+* *Deprecated: `get_fisher_adjusted_vars.py` is used to get and view the correlation data for the adjusted Fisher's test.*
 
 # More details:
 

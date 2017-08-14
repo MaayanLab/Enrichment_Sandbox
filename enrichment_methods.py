@@ -27,13 +27,13 @@ def Control(l_tf_genes, f_tfs):
 def Fisher(l_tf_genes, f_matrix):
 	'''Assigns p vals from Fisher exact test using the greater alternative.'''
 	p = pd.Series(index=f_matrix.columns)
+	l_tf_genes = set(l_tf_genes)
 	for column in f_matrix:
 		f_tf_genes = set(f_matrix.index[f_matrix[column]])
-		a = len(f_tf_genes & set(l_tf_genes))
+		a = len(f_tf_genes & l_tf_genes)
 		b = len(f_tf_genes) - a
 		c = len(l_tf_genes) - a
 		d = 20000 - a - b - c
-		#print(a,b,c,d) #diagnostics
 		o,p[column] =  stats.fisher_exact([[a,b],[c,d]], alternative='greater')
 	return(list(p))
 
@@ -46,118 +46,8 @@ def BinomialProportions(l_tf_genes, f_matrix):
 		b = len(f_tf_genes)
 		c = len(l_tf_genes) - a
 		d = f_matrix.shape[0] - b
-		#print(a,b,c,d) #diagnostics
 		o,p[column] =  stats.fisher_exact([[a,b],[c,d]], alternative='greater')
 	return(list(p))
-
-def FisherAdjusted(l_tf_genes, f_matrix, l_lib, f_lib, ARCHS4_genes_dict):
-	'''
-	Under construction...
-	'''
-	#Get the correlation data.
-	cwd = os.getcwd()
-	os.chdir('..')
-	os.chdir('libs')
-	ARCHS4 = h5py.File(l_lib + '_ARCHS4_corr.h5', 'r+')
-	os.chdir('..')
-	os.chdir(cwd)
-
-	#Get variables which will be the same for each iteration, or only depend on the organism. 
-	l_tf_genes = set(l_tf_genes)
-	c_overlap_dict = {'human':{str(x).encode('utf-8') for x in l_tf_genes} & set(ARCHS4_genes_dict['human'].index),
-		'mouse':{str(x).encode('utf-8') for x in l_tf_genes} & set(ARCHS4_genes_dict['mouse'].index)}
-	if f_lib == 'ENCODE_TF_ChIP-seq_2015': organism_dict = {'hg19': 'human', 'mm9': 'mouse'}
-
-	#For each tf, store the information collected in 'info' for use in the next iteration.
-	info = pd.DataFrame(index=['p', 'o_frac', 'o_frac2', 'r', 'r2'], columns = f_matrix.columns)
-	info.loc['o_frac',:] = 0
-	info.loc['o_frac2',:] = 0
-	for tf in list(f_matrix.columns):
-		#Get the regular p val, just as we do in Fisher().
-		f_tf_genes = set(f_matrix.index[f_matrix[tf]])
-		#'a_genes' are the genes in both the feature library tf and the label library tf.
-		#In other words, 'a_genes' is the intersection cell of the 2x2 contingency table. 
-		a_genes = f_tf_genes & l_tf_genes
-		a = len(a_genes)
-		b = len(f_tf_genes) - a
-		c = len(l_tf_genes) - a
-		d = 20000 - a - b - c
-		info.at['p', tf] = max(1e-50,stats.fisher_exact([[a,b],[c,d]], alternative='greater')[1])
-
-		#Determine which organism this tf data came from. Doing this depends on the gmt file. 
-		if f_lib == 'CREEDS': organism = tf.partition(' GSE')[0].rpartition(' ')[2]
-		elif f_lib == 'ChEA_2016': 
-			organism = tf.rpartition('_')[2].lower()
-			if organism in ['ovary', 'hela', 'neurons', 'gbm']: organism = 'human'
-		elif f_lib == 'ENCODE_TF_ChIP-seq_2015': organism = organism_dict[tf.rpartition('_')[2].lower()]
-		else: print('invalid lib name!')
-		if organism == 'rat': organism = 'mouse'
-		if organism in ['human', 'mouse']:
-
-			#Use 'ARCHS4_genes_dict' to get the appropriate list of ARCHS4 genes.
-			ARCHS4_genes = ARCHS4_genes_dict[organism]
-
-			#Get the overlap of ARCHS4 genes with the contingency table cells.
-			b_overlap = {str(x).encode('utf-8') for x in f_tf_genes} & set(ARCHS4_genes.index)
-			c_overlap = c_overlap_dict[organism]
-			a_overlap = b_overlap & c_overlap
-			a_l_o = len(a_overlap)
-			b_l_o = len(b_overlap)
-			c_l_o = len(c_overlap)
-			l_o = len(b_overlap | c_overlap)
-			
-			#will edit comments below later.
-			if l_o > 0: 
-				#'o_frac' is the proportion of genes in the intersection cell which are also in ARCHS4.
-				#Limit its value to < .95 to prevent an extreme effect when used in the adjustment formula. 
-				info.at['o_frac',tf] = min(l_o / (b+c),.95)
-				if len(b_overlap) > 0 and len(c_overlap) > 0:
-					#Get the indices of the overlapping genes, and use this to index the correlation matrix.
-					b_overlap_indices = sorted(ARCHS4_genes[b_overlap])
-					c_overlap_indices = sorted(ARCHS4_genes[c_overlap])
-					r_vals = ARCHS4[organism]['data']['correlation'][b_overlap_indices][:,c_overlap_indices]
-					#r_vals is the correlation matrix for only the overlapping tfs. 
-					#Now, get the average r value for non-diagonal i.e. pairwise entries. 
-					#(Each pair is duplicated across the diagonal, but this does not affect the result.)
-					info.at['r',tf] = min((np.sum(r_vals) - a_l_o)/(b_l_o*c_l_o - a_l_o),.95)
-
-					if len(a_overlap) > 1:
-						info.at['o_frac2',tf] = min(a_l_o / (a),.95)
-						a_overlap_indices = sorted(ARCHS4_genes[a_overlap])
-						r_vals = ARCHS4[organism]['data']['correlation'][a_overlap_indices][:,a_overlap_indices]
-						info.at['r2',tf] = min((np.sum(r_vals) - a_l_o)/(a_l_o*a_l_o - a_l_o),.95)
-
-		#If the organism cannot be identified, ARCHS4 cannot be used.
-		else: print('weird organism:', organism, tf)
-	ARCHS4.close()
-
-	#for tfs which did not have at least 2 genes in ARCHS4, set their 'r' val to the median. 
-	#(We should not set to zero, since this would "punish" them in comparison to tfs with very low 'r' val.)
-	r_grand_median = info.loc['r',:].median()
-	if pd.isnull(r_grand_median): r_grand_median = 0
-	info.loc['r',:].fillna(r_grand_median, inplace=True)
-
-	r_grand_median = info.loc['r2',:].median()
-	if pd.isnull(r_grand_median): r_grand_median = 0
-	info.loc['r2',:].fillna(r_grand_median, inplace=True)
-
-	#Get the adjusted p val for each tf. Lower adjusted p vals are still considered more significant.
-	for tf in list(f_matrix.columns):
-		info.at['p_adjusted1',tf] = log(info.at['p',tf]) * (1/(1-info.at['r',tf]) ** (100 * info.at['o_frac',tf]))
-		info.at['p_adjusted2',tf] = log(info.at['p',tf]) * (1/(1-info.at['r',tf]) ** (1000 * info.at['o_frac',tf]))
-		info.at['p_adjusted3',tf] = log(info.at['p',tf]) - (1/(1-info.at['r',tf])) ** (info.at['o_frac',tf])
-		info.at['p_adjusted4',tf] = log(info.at['p',tf]) - (100/(1-info.at['r',tf])) ** (info.at['o_frac',tf])
-		info.at['p_adjusted5',tf] = (1 + log(info.at['p',tf])) * (1/(1-info.at['r',tf]) ** (info.at['o_frac',tf]))
-		info.at['p_adjusted6',tf] = log(info.at['p',tf]) * (1/(1-info.at['r2',tf]) ** (100 * info.at['o_frac2',tf]))
-		info.at['p_adjusted7',tf] = log(info.at['p',tf]) * (1/(1-info.at['r2',tf]) ** (1000 * info.at['o_frac2',tf]))
-		info.at['p_adjusted8',tf] = log(info.at['p',tf]) - (1/(1-info.at['r2',tf])) ** (info.at['o_frac2',tf])
-		info.at['p_adjusted9',tf] = log(info.at['p',tf]) - (100/(1-info.at['r2',tf])) ** (info.at['o_frac2',tf])
-		info.at['p_adjusted10',tf] = (1 + log(info.at['p',tf])) * (1/(1-info.at['r2',tf]) ** (info.at['o_frac2',tf]))
-
-	print(info.iloc[:,345])
-
-	return [info.loc['p_adjusted1',:], info.loc['p_adjusted2',:], info.loc['p_adjusted3',:], info.loc['p_adjusted4',:], info.loc['p_adjusted5',:], 
-		info.loc['p_adjusted6',:], info.loc['p_adjusted7',:], info.loc['p_adjusted8',:], info.loc['p_adjusted9',:], info.loc['p_adjusted10',:]]
 
 def ZAndCombined(l_tf_genes, f_lib, f_tfs):
 	'''Uses the Enrichr API to return two lists containing the Z score and Combined score rankings.
@@ -229,7 +119,11 @@ def ML_wrapper_2(l_tf_genes, method, train_group, features, random_state, max_de
 	else: return [-x for x in clf.feature_importances_]
 
 def ML_iterative(l_tf_genes, method, it, train_group, features, random_state):
-	'''This is a wrapper for sklearn.ensemble methods which calls the method recursively, incrementally choosing features.'''
+	'''
+	This is a wrapper for sklearn.ensemble methods which calls the method recursively, incrementally choosing features.
+	it : int
+		the number of features chosen at each iteration, within the top fifty ranks. 
+	'''
 	f = list(features)
 	rankings = pd.Series(index=features)
 	x = 0
@@ -318,14 +212,80 @@ def Impurity(l_tf_genes, f_matrix, metric):
 		n_out = n - n_in
 
 		'''
-		p_in corresponds to the "a" cell of the 2x2 contingency table from Fisher.
-		n_in corresponds to the "b" cell of the 2x2 contingency table from Fisher.
-		p_out corresponds to the "c" cell of the 2x2 contingency table from Fisher.
-		n_out corresponds to the "d" cell of the 2x2 contingency table from Fisher. 
-			(Although "d" is estimated as 20000 - a - b - c in our actual Fisher() function.)
-
-		Because the starting impurity is same for each split, it is sufficient to use the weighted average
-			for the two resulting nodes as the score. 
+		p_in is the same as "a" from Fisher.
+		n_in is the same as "b" from Fisher.
+		p_out is NOT the same as "c" from Fisher: it is the subset of "c" that intersects with 
+			the set of genes from the feature library. 
+		n_out is NOT the same as "d" from Fisher. Fisher's "d" = 20000 - a - b - c.
+			n_out is the genes in the feature library which are not in either the label or feature tf gene sets.  
 		'''
+
+		#Because the starting impurity is same for each split, it is sufficient to use the weighted average
+			#for the two resulting nodes as the score.
 		results[column] = ((p_in + n_in) * I(p_in, n_in, metric) + (p_out + n_out) * I(p_out, n_out, metric)) / (p + n)
 	return(list(results))
+
+def ML_Fisher_features(l_tf_genes, f_matrix, classifier):
+	'''
+	Applies machine learning to classify tf gene set pairs based on Fisher contingency table and p value.
+	See get_classifiers in get_scores.py .
+	'''
+
+	#Build test_df.
+	test_df = pd.DataFrame(columns=['a','b','c','d','a/d','a/(a+b)','a/(a+c)','p'])
+	l_tf_genes = set(l_tf_genes)
+	for column in f_matrix:
+		f_tf_genes = set(f_matrix.index[f_matrix[column]])
+		a = len(f_tf_genes & l_tf_genes)
+		b = len(f_tf_genes) - a
+		c = len(l_tf_genes) - a
+		d = 20000 - a - b - c
+		o,p =  stats.fisher_exact([[a,b],[c,d]], alternative='greater')
+		result = pd.Series([a,b,c,d,a/d,a/(a+b),a/(a+c),p],
+							index=['a','b','c','d','a/d','a/(a+b)','a/(a+c)','p'],
+							name = column)
+		test_df = test_df.append(result)
+
+	#Use our classifier built in get_scores.py to predict the classifications of test_df. 
+	return [a for (a,b) in classifier.predict_proba(test_df)]
+
+def ML_Fisher_features_3(l_tf_genes, f_matrix, classifier, RFC, XGB, features, random_state):
+	'''
+	Variant of ML_Fisher_features which also considers random forest feature importance, 
+		Gini impurity, XGBoost feature importance (though this is slow), and possibly other 
+		engineered features. 
+	'''
+	test_df = pd.DataFrame(columns=['a','b','c','d','a/d','a/(a+b)','a/(a+c)','p','rf','gini','xgb'])
+
+	#Fill fisher's contingency table and p value columns.
+	l_tf_genes = set(l_tf_genes)
+	for column in f_matrix:
+		f_tf_genes = set(f_matrix.index[f_matrix[column]])
+		a = len(f_tf_genes & l_tf_genes)
+		b = len(f_tf_genes) - a
+		c = len(l_tf_genes) - a
+		d = 20000 - a - b - c
+		o,p =  stats.fisher_exact([[a,b],[c,d]], alternative='greater')
+		result = pd.Series([a,b,c,d,a/d,a/(a+b),a/(a+c),p,None,None,None],
+							index=['a','b','c','d','a/d','a/(a+b)','a/(a+c)','p','rf','gini','xgb'],
+							name = column)
+		test_df = test_df.append(result)
+
+	#Fill random forest feature importance column.
+	target = [str(x) in l_tf_genes for x in f_matrix.index.values]
+	rf_clf = RFC(random_state = random_state)
+	rf_clf.fit(f_matrix[features], target)
+	test_df['rf'] = [-x for x in rf_clf.feature_importances_]
+
+	#Fill gini impurity column.
+	test_df['gini'] = Impurity(l_tf_genes, f_matrix, 'Gini')
+
+	# Comment the below section out if you do not plan to use xgboost. 
+	# (It takes a while to build the classifier.)
+	# print('xgb')
+	# xgb_clf = XGB(random_state = 73017)
+	# xgb_clf.fit(f_matrix[features], target)
+	# test_df['xgb'] = [-x for x in xgb_clf.feature_importances_]
+
+	#If xgboost is not used, remember to drop it from the columns here. 
+	return [a for (a,b) in classifier.predict_proba(test_df.drop('xgb', axis=1))]

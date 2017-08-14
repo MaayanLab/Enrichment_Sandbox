@@ -7,7 +7,13 @@ import enrichment_methods as m
 from setup import convert_gmt
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, \
 	RandomTreesEmbedding, AdaBoostClassifier, ExtraTreesClassifier
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.svm import LinearSVC
+from xgboost import XGBClassifier
+from random import uniform as rand
+from setup import open_csv
+import scipy.stats as stats
+from get_classifiers import get_classifiers
 import h5py
 
 def clean(tf):
@@ -53,24 +59,13 @@ def get_methods_and_params(l,f, l_name, f_name):
 		the name of f, for example "CREEDS"
 	'''
 
-	#Get the ARCHS4 correlation data.
-	#This section is only necessary if FisherAdjusted is used.
-	#This must be commented out if using a lib for which 
-		#the ARCHS4 correlation files have not been created.
-	# os.chdir('..')
-	# os.chdir('libs')
-	# ARCHS4 = h5py.File(l_name + '_ARCHS4_corr.h5', 'r+')
-	# os.chdir('..')
-	# os.chdir('results')
-	# h_genes = ARCHS4['human']['meta']['genes']
-	# m_genes = ARCHS4['mouse']['meta']['genes']
-	# ARCHS4_genes_dict = {'human': pd.Series(np.arange(len(h_genes)), index=h_genes[...]),
-	# 	'mouse': pd.Series(np.arange(len(m_genes)), index=m_genes[...])}
-	# ARCHS4.close()
-
 	#(Define any other variables, as necessary, here.)
 	train_group = f
 	features = f.columns.values
+
+	#Create a classifier - only necessary for ML_fisher_features.
+	#Otherwise, comment out. 
+	classifier = get_classifiers(l_name, f_name)
 
 	#=====================================================================================================================================
 	#This is where you choose which enrichment methods to run, and which paramaters to use!
@@ -80,21 +75,8 @@ def get_methods_and_params(l,f, l_name, f_name):
 	#You must specify ALL the params EXCEPT for l_tf_genes, which is initialized and called later, in enrichment_wrapper().
 	#=====================================================================================================================================
 	df = pd.DataFrame(index=['func', 'params'])
-	#df['Control'] = [m.Control, ([f.columns.values])]
-	df['newFisher'] = [m.newFisher, ([f])]
-	df['Impurity_Entropy'] = [m.Impurity, (f, 'Entropy')]
-	df['Impurity_Gini'] = [m.Impurity, (f, 'Gini')]
-	#df['FAV'] = [m.FisherAdjusted, (f, l_name, f_name, ARCHS4_genes_dict)]
-	#df['ZAndCombined'] = [m.ZAndCombined, (f_name, f.columns.values)]
-	#df['RandomForest'] = [m.ML_wrapper, (RandomForestClassifier, train_group, features, 73017)]
-	#df['GradientBoosting'] = [m.ML_wrapper, (GradientBoostingClassifier, train_group, features, 73017)]
-	#df['RandomForest_mf_log2'] = [m.ML_wrapper_adjusted, (RandomForestClassifier, train_group, features, 73017, 'log2', None)]
-	#df['RandomForest_cw_balanced'] = [m.ML_wrapper_adjusted, (RandomForestClassifier, train_group, features, 73017, 'auto', 'balanced')]
-	#df['ForestDrop5'] = [m.ML_iterative, (RandomForestClassifier, 5, train_group, features, 73017)]
-	#df['ForestFisherCutoffV2.5'] = [m.ML_fisher_cutoff_V2, (RandomForestClassifier, .5, train_group, features, 73017)]
-	#df['ForestFisherCutoffV2.25'] = [m.ML_fisher_cutoff_V2, (RandomForestClassifier, .25, train_group, features, 73017)]
-	#df['ForestFisherCutoffV2.10'] = [m.ML_fisher_cutoff_V2, (RandomForestClassifier, .10, train_group, features, 73017)]
-	#df['ForestFisherCutoffV2.05'] = [m.ML_fisher_cutoff_V2, (RandomForestClassifier, .05, train_group, features, 73017)]
+	df['ML_Fisher_features14'] = [m.ML_Fisher_features_3, (f, classifier, RandomForestClassifier, XGBClassifier, features, 73017)]
+
 	return df
 
 def enrichment_wrapper(pair):
@@ -117,7 +99,7 @@ def enrichment_wrapper(pair):
 	for column in methods_and_params:
 		mp = methods_and_params[column]
 
-		#Some methods actually return multiple results, and so will need multiple output files.
+		#Some methods actually return multiple results. These will need multiple output files.
 		if mp.name == 'ZAndCombined': 
 			output_fnames = (output_heading + '_Z.csv', output_heading + '_Combined.csv')
 		elif mp.name == 'FAV':
@@ -134,7 +116,7 @@ def enrichment_wrapper(pair):
 			dfs = [pd.DataFrame() for n in range(len(output_fnames))]
 			#Iterate over each tf in the overlaps.
 			for l_tf in overlaps:
-				print(mp.name, l_tf) #for diagnostics
+				print(mp.name, l_tf) #for diagnostics.
 				l_tf_genes = pair['l'].index[pair['l'][l_tf]]
 				result = mp['func'](l_tf_genes, *mp['params'])
 				for x in range(len(dfs)): 
@@ -150,7 +132,8 @@ def enrichment_wrapper(pair):
 	return
 
 if __name__ == '__main__':
-	all_libs = ['DrugBank','CREEDS_Drugs']
+	all_libs = ['ENCODE_TF_ChIP-seq_2015', 'ChEA_2016']
+	#all_libs = ['DrugBank','CREEDS_Drugs']
 
 	#Get dataframes of each gmt library in all_libs
 	os.chdir('libs')

@@ -8,6 +8,55 @@ from joblib import Parallel, delayed
 from collections import Counter
 from setup import open_csv
 
+#This is used to assign each method a color for the bridge plots.
+color_dict = {
+	'Fisher': 'black',
+	'Control': 'gray',
+	'Binomial_proportion': 'C0',
+	'RandomForest': 'C2',
+	'BadRForest': 'C0',
+	'ML_Fisher_features': 'C0',
+	'Combined': 'C8',
+	'CombinedFF':'C1',
+	'CombinedFF2':'C0',
+	'CombinedFF3':'C2',
+	'CombinedFF4':'C3',
+	'Z': 'C9',
+	'Impurity_Entropy': 'C3',
+	'Impurity_Gini': 'C4',
+	'Forest_ne_5': '#6bd66b',
+	'Forest_ne_25': '#289128',
+	'Forest_ne_50': '#175317',
+	'Forest_md_2': '#c8f0c8',
+	'Forest_md_4': '#a9e7a9',
+	'Forest_md_6': '#8adf8a',
+	'Forest_md_8': '#6bd66b',
+	'Forest_md_10': '#3dca3d',
+	'ForestDrop': '#662ca0',
+	'ForestDrop5': '#a02c66',
+	'ExtraTrees': '#b8e7a1',
+	'ExtraTreesDrop': '#72d043',
+	'ExtraTreesDrop5': '#2f5e18',
+	'ForestFisherCutoff.05': '#decaa6',
+	'ForestFisherCutoff.10': '#c9a86d',
+	'ForestFisherCutoff.25': '#9a7839',
+	'ForestFisherCutoff.5': '#614b24',
+	'ForestFisherCutoffV2.05': '#decaa6',
+	'ForestFisherCutoffV2.10': '#c9a86d',
+	'ForestFisherCutoffV2.25': '#9a7839',
+	'ForestFisherCutoffV2.5': '#614b24',
+	'FisherForestCutoff.05': '#e1c6cc',
+	'FisherForestCutoff.10': '#d0a5ad',
+	'FisherForestCutoff.25': '#be838f',
+	'FisherForestCutoff.5': '#ad6270',
+	'AdaBoost': 'C0',
+	'GradientBoosting': 'C1',
+	'RandomTreesEmbedding': 'C3',
+	'ExtraTrees': 'C4',
+	'XGBoost': 'C5',
+	'LinearSVC':'C6',
+}
+
 def plot_curve(df, col, prefix):
 	'''
 	This helper function plots a single bridge plot curve.
@@ -28,8 +77,12 @@ def plot_curve(df, col, prefix):
 	if name == 'Fisher': linewidth=2
 	else: linewidth=1
 
-	plt.plot(x_vals, y_vals, label=prefix + name + '    ' + 
-		'AUC: ' + str(np.round(auc(x_vals, y_vals), 4)), linewidth=linewidth)
+	if name in color_dict:
+		plt.plot(x_vals, y_vals, label=prefix + name + '    ' + 'AUC: ' 
+			+ str(np.round(auc(x_vals, y_vals), 4)), color=color_dict[name], linewidth=linewidth)
+	else: 
+		plt.plot(x_vals, y_vals, label=prefix + name + '    ' + 'AUC: ' 
+			+ str(np.round(auc(x_vals, y_vals), 4)), linewidth=linewidth)
 
 def pairwise_plots(pair):
 	'''Creates a bridge plot for enrichment between the specified library pair.
@@ -50,7 +103,7 @@ def pairwise_plots(pair):
 		for column in scores: 
 			if dn_file is not None:
 				#Get the BEST score for each feature library experiment.
-				combined = pd.Series([min(*l) for l in zip(up[column], dn[column])], index=up.index) 
+				combined = pd.Series([min(*l) for l in zip(scores[column], dn[column])], index=scores.index) 
 				#Sort the feature library experiments by their scores.
 				ordered_tfs = combined.sort_values().index
 			else:
@@ -133,7 +186,7 @@ def pairwise_plots(pair):
 		for column in agg_c:
 			col = (column.partition(',')[0], column.partition(',')[2])
 			#Filter for only certain enrichment methods here using the below if statement.
-			if col[1] == 'x' and ('xxx' in col[0] or col[0] in ['Control', 'Fisher', 'RandomForest']):
+			if col[1] == 'x' and ('Fisher_rep' in col[0] or col[0] in ['Control', 'Fisher', 'RandomForest']):
 				plot_curve(agg_c, col, '')
 		plt.title(pair['l'].replace('_up', '_up/dn') + ' to ' + pair['f'].replace('_up', '_up/dn') + ' Bridge Plot')
 		plt.xlabel('Rank')
@@ -200,51 +253,13 @@ def subplots(lib_pairs, all_libs, top_10):
 					for column in agg_c:
 						col = (column.partition(',')[0], column.partition(',')[2])
 						#Use the 'if' statement below to filter out which results you want to view.
-						if col[1] == 'x' and ('Forest_cr' in col[0] or col[0] in ['Control', 'Fisher', 'RandomForest']):
+						if col[1] == 'x' and ('ML_Fisher' in col[0] or col[0] in ['Fisher','Control', 'RandomForest',]):
 							name = col[0] 
 							x_vals = [a/len(agg_c[name + ',x']) for a in agg_c[name + ',x']]
 							y_vals = agg_c[name + ',y']
 
 							linewidth = 2.5
-
-							color_dict = {
-								'Fisher': 'black',
-								'Control': 'gray',
-								'RandomForest': 'C2',
-								'Combined': 'C8',
-								'CombinedFF':'C1',
-								'Z': 'C9',
-								'Impurity_Entropy': 'C3',
-								'Impurity_Gini': 'C4',
-								'Forest_ne_5': '#6bd66b',
-								'Forest_ne_25': '#289128',
-								'Forest_ne_50': '#175317',
-								'Forest_md_2': '#c8f0c8',
-								'Forest_md_4': '#a9e7a9',
-								'Forest_md_6': '#8adf8a',
-								'Forest_md_8': '#6bd66b',
-								'Forest_md_10': '#3dca3d',
-								'ForestDrop': '#662ca0',
-								'ForestDrop5': '#a02c66',
-								'ExtraTrees': '#b8e7a1',
-								'ExtraTreesDrop': '#72d043',
-								'ExtraTreesDrop5': '#2f5e18',
-								'ForestFisherCutoff.05': '#decaa6',
-								'ForestFisherCutoff.10': '#c9a86d',
-								'ForestFisherCutoff.25': '#9a7839',
-								'ForestFisherCutoff.5': '#614b24',
-								'ForestFisherCutoffV2.05': '#decaa6',
-								'ForestFisherCutoffV2.10': '#c9a86d',
-								'ForestFisherCutoffV2.25': '#9a7839',
-								'ForestFisherCutoffV2.5': '#614b24',
-								'FisherForestCutoff.05': '#e1c6cc',
-								'FisherForestCutoff.10': '#d0a5ad',
-								'FisherForestCutoff.25': '#be838f',
-								'FisherForestCutoff.5': '#ad6270',
-							}
-
-							if name == 'Fisher': methods[name] = subplot.plot(x_vals, y_vals, label=name, color=color_dict[name], linewidth=linewidth)
-							else: methods[name] = subplot.plot(x_vals, y_vals, label=name, linewidth=linewidth)
+							methods[name] = subplot.plot(x_vals, y_vals, label=name, color=color_dict[color], linewidth=linewidth)
 							#If you want to view legends for each subplot (e.g. to see the AUC), you will need to un-comment this line.
 							#subplot.legend(fontsize=12)
 			#Uncomment below to scale all subplots equally (to compare relative sizes between subplots).

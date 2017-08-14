@@ -113,7 +113,10 @@ def download_file(url, output_fname):
 	return 
 
 def get_ARCHS4_correlation_matrices(lib):
-	'''Creates .h5 files with correlation matrices between the intersection of genes from ARCHS4 and imput gmt lib files.
+	'''
+	NO LONGER IN USE
+	Creates .h5 files with correlation matrices between 
+		the intersection of genes from ARCHS4 and imput gmt lib files.
 	libs : list
 		Contains the names of the gmt files.
 	'''
@@ -137,7 +140,7 @@ def get_ARCHS4_correlation_matrices(lib):
 		print(len(overlap_genes))
 		overlap_indices = ARCHS4_genes[overlap_genes].sort_values()
 
-		#Get a sub-matrix by indexing only on the genes which were also in the gmt file
+		#Get a sub-matrix by indexing only on the genes which were also in the gmt file.
 		data = pd.DataFrame(ARCHS4['data']['expression'][overlap_indices,:], index=overlap_indices.index)
 		print('got data')
 		data = data.transpose()
@@ -163,14 +166,6 @@ def get_ARCHS4_correlation_matrices(lib):
 if __name__ == '__main__':
 
 	os.chdir('libs')
-
-	#combine_gmts(['Single_Gene_Perturbations_from_GEO_down', 'Single_Gene_Perturbations_from_GEO_up'], 'CREEDS_transformed.csv')
-
-	#This is only necessary if you plan to use the FisherAdjusted function as one of your methods.
-	#for fname in ('human_matrix.h5', 'mouse_matrix.h5'):
-	#	print('downloading', fname + ' . (This will take at least ten minutes.)')
-	#	download_file('https://s3.amazonaws.com/mssm-seq-matrix/' + fname, fname)
-
+	combine_gmts(['Single_Gene_Perturbations_from_GEO_down', 'Single_Gene_Perturbations_from_GEO_up'], 'CREEDS_transformed.csv')
 	Parallel(n_jobs=2, verbose=0)(delayed(convert_gmt)('df',x) for x in ['ChEA_2016', 'ENCODE_TF_ChIP-seq_2015'])
-
 	os.chdir('..')

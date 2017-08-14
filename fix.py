@@ -49,9 +49,20 @@ def remove_this_method_from_ranking_files(method):
 					f.drop(col, axis=1, inplace=True)
 			f.to_csv(x, sep='\t')
 
-os.chdir('results')
+def comma_sep_to_tab_sep(file):
+	x = pd.read_csv(file, index_col=0, sep=',', low_memory=False, keep_default_na=False, encoding='Latin-1')
+	x.to_csv(file, sep='\t')
+	
+# os.chdir('results')
+# rename('RandomForest.csv','BadRForest.csv')
+# rename('RandomForest_rep.csv','RandomForest.csv')
+# #invert('InfoGainEntropy')
+# #remove_this_method_from_ranking_files('ExtraTrees')
+# #rename('Classifier','')
+# remove_old_methods_from_ranking_files()
 
-#invert('InfoGainEntropy')
-#remove_this_method_from_ranking_files('ExtraTrees')
-#rename('Classifier','')
-#remove_old_methods_from_ranking_files()
+os.chdir('libs')
+for x in os.listdir(os.getcwd()):
+	if '_fisher_classifier_data' in x:
+		print(x)
+		comma_sep_to_tab_sep(x)

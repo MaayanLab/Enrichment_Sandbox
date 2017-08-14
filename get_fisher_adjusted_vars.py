@@ -7,6 +7,8 @@ import h5py
 import math
 from joblib import Parallel, delayed
 from setup import convert_gmt
+import open_csv
+import matplotlib as plt
 
 #====================================================================================================================================
 '''
@@ -217,11 +219,11 @@ def compare_vars(lib_pairs, all_libs):
 					subplot.tick_params(axis='both', which='both', bottom='off', top='off',labelbottom='off')
 					subplot.axes.get_yaxis().set_ticks([])
 
-		#Label the rows and columns of the figure
+		#Label the rows and columns of the figure.
 		lib_titles = [x.replace('Single_Gene_Perturbations_from_GEO_up', 'CREEDS_up/dn_sep') for x in all_libs]
 		for ax, col in zip(axarr[0], lib_titles): ax.set_title(col)
 		for ax, row in zip(axarr[:,0], lib_titles): ax.set_ylabel(row, size='large')
-		#Leave some space between the subplots
+		#Leave some space between the subplots.
 		f.subplots_adjust(hspace=.15, wspace=.1)
 		#Create a legend in the last cell (should be empty, as it is a diagonal).
 		plt.legend([x for sublist in methods.values for x in sublist], methods.index)
@@ -234,7 +236,7 @@ if __name__ == '__main__':
 	lib_pairs = [{'l':a, 'f':b} for a in all_libs for b in all_libs if a != b]
 	lib_df_pairs = [{'l':all_dfs[a], 'f':all_dfs[b]} for a in all_libs for b in all_libs if a != b]
 
-	#Get dataframes of each gmt library in all_libs
+	#Get dataframes of each gmt library in all_libs.
 	os.chdir('libs')
 	all_dfs = {x:convert_gmt('df', x) for x in all_libs}
 	os.chdir('..')
