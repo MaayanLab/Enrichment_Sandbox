@@ -13,7 +13,7 @@ The benchmarking process is as follows: Two libraries, A and B, are chosen. Term
 * RandomForest, ExtraTrees, RandomTreesEmbedding, GradientBoosting and AdaBoost from sklearn.ensemble
 * LinearSVC from sklearn.svm
 * XGBoost from the DMLC
-** Above machine learning methods use feature importances to rank gene sets based on a classifier which predicts whether genes in the library also belong to the input gene set
+	* Above machine learning methods use feature importances to rank gene sets based on a classifier which predicts whether genes in the library also belong to the input gene set
 * Recursive variants of the above machine learning methods
 * Mixtures of the above methods, i.e. score averaging, gene set elimination.
 * Above machine learning methods, but using a classifier that predicts whether or not a gene set is enriched based on Fisher contingency table values and other scores (e.g. Fisher p value, Gini impurity)
