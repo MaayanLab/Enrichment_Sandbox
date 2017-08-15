@@ -8,7 +8,8 @@ from joblib import Parallel, delayed
 
 def open_csv(transformed_gmt_file):
 	return pd.read_csv(transformed_gmt_file, 
-		index_col=0, sep='\t', low_memory=False, keep_default_na=False, encoding='Latin-1')
+		index_col=0, sep='\t', low_memory=False, encoding='Latin-1')
+	#Removed: keep_default_na = False
 
 def file_exists(f_name):
 	'''Checks if a file exists in the directory, printing a statement if so.'''
