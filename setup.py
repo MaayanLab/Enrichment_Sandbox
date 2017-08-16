@@ -7,8 +7,12 @@ import pandas as pd
 from joblib import Parallel, delayed 
 
 def open_csv(transformed_gmt_file):
-	return pd.read_csv(transformed_gmt_file, 
-		index_col=0, sep='\t', low_memory=False, keep_default_na=False, encoding='Latin-1')
+	f_name = transformed_gmt_file.partition('_transformed.csv')[0]
+	df = pd.read_csv(transformed_gmt_file, keep_default_na = False, sep='\t', low_memory=False, encoding='Latin-1')
+	df.set_index(df[f_name], inplace=True)
+	df.drop([f_name], axis=1, inplace=True)
+	return df
+	#Workaroud from bug which called error if keep_default_na=False and index_col=True are both used.
 
 def file_exists(f_name):
 	'''Checks if a file exists in the directory, printing a statement if so.'''
@@ -167,5 +171,6 @@ if __name__ == '__main__':
 
 	os.chdir('libs')
 	combine_gmts(['Single_Gene_Perturbations_from_GEO_down', 'Single_Gene_Perturbations_from_GEO_up'], 'CREEDS_transformed.csv')
+	x = convert_gmt('df','dummy_gmt')
 	Parallel(n_jobs=2, verbose=0)(delayed(convert_gmt)('df',x) for x in ['ChEA_2016', 'ENCODE_TF_ChIP-seq_2015'])
 	os.chdir('..')
