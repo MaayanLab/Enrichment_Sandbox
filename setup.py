@@ -9,10 +9,10 @@ from joblib import Parallel, delayed
 def open_csv(transformed_gmt_file):
 	f_name = transformed_gmt_file.partition('_transformed.csv')[0]
 	df = pd.read_csv(transformed_gmt_file, keep_default_na = False, sep='\t', low_memory=False, encoding='Latin-1')
+	#Workaroud from bug which called error if keep_default_na=False and index_col=True are both used.
 	df.set_index(df[f_name], inplace=True)
 	df.drop([f_name], axis=1, inplace=True)
 	return df
-	#Workaroud from bug which called error if keep_default_na=False and index_col=True are both used.
 
 def file_exists(f_name):
 	'''Checks if a file exists in the directory, printing a statement if so.'''
