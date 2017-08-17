@@ -7,12 +7,12 @@ import pandas as pd
 from joblib import Parallel, delayed 
 
 def open_csv(transformed_gmt_file):
-	f_name = transformed_gmt_file.partition('_transformed.csv')[0]
-	df = pd.read_csv(transformed_gmt_file, keep_default_na = False, sep='\t', low_memory=False, encoding='Latin-1')
-	df.set_index(df[f_name], inplace=True)
-	df.drop([f_name], axis=1, inplace=True)
-	return df
+	gmt_name = transformed_gmt_file.partition('_transformed.csv')[0]
 	#Workaroud from bug which called error if keep_default_na=False and index_col=True are both used.
+	df = pd.read_csv(transformed_gmt_file, keep_default_na = False, sep='\t', low_memory=False, encoding='Latin-1')
+	df.set_index(df[gmt_name], inplace=True)
+	df.drop([gmt_name], axis=1, inplace=True)
+	return df
 
 def file_exists(f_name):
 	'''Checks if a file exists in the directory, printing a statement if so.'''
@@ -60,7 +60,7 @@ def convert_gmt(output_type, lib_name):
 		for row in reader:
 			tf = row[0]
 			if tf not in MY_NA_VALS:
-				d[tf] = [str(x).replace(',1.0', '') for x in row[2:] if x not in MY_NA_VALS]
+				d[tf] = {str(x).replace(',1.0', '') for x in row[2:] if x not in MY_NA_VALS}
 		return d
 
 	#If you want the df, check to see if it has already been created. If so, simply load it and return it.
@@ -94,18 +94,23 @@ def combine_gmts(gmts, output_fname):
 	if file_exists(output_fname): return
 	print('creating', output_fname)
 
+	print('getting gmts as dicts')
 	dicts = [convert_gmt('dict', x) for x in gmts]
 
+	print('merging dicts')
 	#Combine the dicts into a single dict. Note: The libraries have the same tf factors.
 	combined = {}
-	for k in dicts[0]: combined[k] = list(set(dicts[0][k]) | set(dicts[1][k]))
+	for k in dicts[0]: combined[k] = dicts[0][k] | dicts[1][k]
 
+	print('converting merged dict to df')
 	#Convert the dict to a dataframe, one key at a time.
 	df = pd.DataFrame(dtype=bool)
 	for k in combined:
+		print(k)
 		s = pd.DataFrame(True, index = combined[k], columns = [k], dtype=bool)
 		df = pd.concat([df,s], axis=1)
-	df.to_csv('CREEDS_transformed.csv', sep='\t')
+	df.index.name = output_fname.partition('_transformed.csv')[0]
+	df.to_csv(output_fname, sep='\t')
 	return
 
 def download_file(url, output_fname):
