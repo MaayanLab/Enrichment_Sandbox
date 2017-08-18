@@ -121,3 +121,14 @@ In other words, we take each tf from the `label library`, and perform enrichment
 You can interpret the bridge plot as a cdf turned 45 degrees counter-clockwise. 
 
 A good ranking method will result in a bridge plot with a large area underneath it (AUC), and with a tall supremum occuring at a low x-value. (In the best possible outcome, where all ranks occur at x=0, the curve will be an isosceles right triangle with AUC=.5 and supremum of 1 at x=0.)
+
+# Future Directions
+
+* Double-check correctness of code
+* Clean code
+* Make adding new libraries easier
+* Automate and continue hyperparmater search
+* More combos of methods
+* Linear SVC, KNN for ML on Fisher info
+* Validation - just use p vals for ML on Fisher info
+* Pairwise feature importance selection

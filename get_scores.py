@@ -65,7 +65,7 @@ def get_methods_and_params(l,f, l_name, f_name):
 
 	#Create a classifier - only necessary for ML_fisher_features.
 	#Otherwise, comment out. 
-	classifier = get_classifiers(l_name, f_name)
+	#classifier = get_classifiers(l_name, f_name)
 
 	#=====================================================================================================================================
 	#This is where you choose which enrichment methods to run, and which paramaters to use!
@@ -75,7 +75,7 @@ def get_methods_and_params(l,f, l_name, f_name):
 	#You must specify ALL the params EXCEPT for l_tf_genes, which is initialized and called later, in enrichment_wrapper().
 	#=====================================================================================================================================
 	df = pd.DataFrame(index=['func', 'params'])
-	df['ML_Fisher_features14'] = [m.ML_Fisher_features_3, (f, classifier, RandomForestClassifier, XGBClassifier, features, 73017)]
+	df['Fisher_rep_2'] = [m.Fisher, [f]] 
 
 	return df
 
@@ -100,12 +100,8 @@ def enrichment_wrapper(pair):
 		mp = methods_and_params[column]
 
 		#Some methods actually return multiple results. These will need multiple output files.
-		if mp.name == 'ZAndCombined': 
-			output_fnames = (output_heading + '_Z.csv', output_heading + '_Combined.csv')
-		elif mp.name == 'FAV':
-			output_fnames = [output_heading + '_FisherAdjusted' + str(x) + '.csv' for x in range(1,11)]
-		else: 
-			output_fnames = (output_heading + '_' + mp.name + '.csv',)
+		if mp.name == 'ZAndCombined': output_fnames = (output_heading + '_Z.csv', output_heading + '_Combined.csv')
+		else: output_fnames = (output_heading + '_' + mp.name + '.csv',)
 
 		#Check if the file has already been created.
 		if os.path.isfile(output_fnames[0]): print('ranking file already created for', mp.name)
@@ -132,7 +128,7 @@ def enrichment_wrapper(pair):
 	return
 
 if __name__ == '__main__':
-	all_libs = ['ENCODE_TF_ChIP-seq_2015', 'ChEA_2016']
+	all_libs = ['ENCODE_TF_ChIP-seq_2015', 'ChEA_2016', 'CREEDS']
 	#all_libs = ['DrugBank','CREEDS_Drugs']
 
 	#Get dataframes of each gmt library in all_libs
@@ -144,4 +140,4 @@ if __name__ == '__main__':
 
 	#Iterate over each gmt pair.
 	lib_df_pairs = [{'l':all_dfs[a], 'f':all_dfs[b]} for a in all_libs for b in all_libs if a != b]
-	Parallel(n_jobs=2, verbose=0)(delayed(enrichment_wrapper)(pair)for pair in lib_df_pairs)
+	Parallel(n_jobs=6, verbose=0)(delayed(enrichment_wrapper)(pair)for pair in lib_df_pairs)

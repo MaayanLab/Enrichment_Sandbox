@@ -6,7 +6,10 @@ import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed 
 
-def open_csv(transformed_gmt_file):
+def open_csv(csv_file):
+	return pd.read_csv(csv_file, index_col=0, sep='\t', low_memory=False, encoding='Latin-1')
+
+def open_gmt(transformed_gmt_file):
 	gmt_name = transformed_gmt_file.partition('_transformed.csv')[0]
 	#Workaroud from bug which called error if keep_default_na=False and index_col=True are both used.
 	df = pd.read_csv(transformed_gmt_file, keep_default_na = False, sep='\t', low_memory=False, encoding='Latin-1')
@@ -66,7 +69,7 @@ def convert_gmt(output_type, lib_name):
 	#If you want the df, check to see if it has already been created. If so, simply load it and return it.
 	if output_type == 'df' and os.path.isfile(lib_name + '_transformed.csv'): 
 		print('will use old df file for', lib_name)
-		result = open_csv(lib_name + '_transformed.csv')
+		result = open_gmt(lib_name + '_transformed.csv')
 		result.index.name = lib_name
 		return result.fillna(False).astype(bool)
 
@@ -132,7 +135,7 @@ def get_ARCHS4_correlation_matrices(lib):
 	new_fname = lib + '_ARCHS4_corr.h5'
 	#r+ instead of w in case the operation was interrupted before, and the file was already partially created. 
 	new_file = h5py.File(new_fname, 'r+')
-	lib_genes = set(open_csv(lib + '_transformed.csv').index)
+	lib_genes = set(open_gmt(lib + '_transformed.csv').index)
 	#Create a correlation matrix for both human genes and mouse genes. 
 	for organism in ['human', 'mouse']:
 		#In case the file was already partially created.

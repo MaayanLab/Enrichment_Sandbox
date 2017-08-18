@@ -253,17 +253,20 @@ def subplots(lib_pairs, all_libs, top_10):
 					for column in agg_c:
 						col = (column.partition(',')[0], column.partition(',')[2])
 						#Use the 'if' statement below to filter out which results you want to view.
-						if col[1] == 'x' and ('ML_Fisher' in col[0] or col[0] in ['Fisher','Control', 'RandomForest',]):
+						if col[1] == 'x' and ('Fisher' in col[0] or col[0] in ['Fisher','Control', 'RandomForest',]):
 							name = col[0] 
 							x_vals = [a/len(agg_c[name + ',x']) for a in agg_c[name + ',x']]
 							y_vals = agg_c[name + ',y']
 
 							linewidth = 2.5
-							methods[name] = subplot.plot(x_vals, y_vals, label=name, color=color_dict[color], linewidth=linewidth)
+							if name in color_dict: 
+								methods[name] = subplot.plot(x_vals, y_vals, label=name, color=color_dict[name], linewidth=linewidth)
+							else:
+								methods[name] = subplot.plot(x_vals, y_vals, label=name, linewidth=linewidth)
 							#If you want to view legends for each subplot (e.g. to see the AUC), you will need to un-comment this line.
 							#subplot.legend(fontsize=12)
 			#Uncomment below to scale all subplots equally (to compare relative sizes between subplots).
-			#subplot.set_ylim([-.1,.4])
+			subplot.set_ylim([-.1,.4])
 			if top_10: subplot.set_xlim([0,.10])
 			#Only show y-axis on left-most subplots.
 			if j != 0: subplot.yaxis.set_visible(False)
@@ -272,7 +275,7 @@ def subplots(lib_pairs, all_libs, top_10):
 			#Hide ticks -- although axis='both', this only seems to affect the x-axis.
 			subplot.tick_params(axis='x', which='both', bottom='off', top='off',labelbottom='off')
 			#Hide ticks on the y axis.
-			subplot.axes.get_yaxis().set_ticks([])
+			#subplot.axes.get_yaxis().set_ticks([])
 
 	#Label the rows and columns of the figure.
 	print(all_libs)
