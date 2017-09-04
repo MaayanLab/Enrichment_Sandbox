@@ -289,3 +289,91 @@ def ML_Fisher_features_3(l_tf_genes, f_matrix, classifier, RFC, XGB, features, r
 
 	#If xgboost is not used, remember to drop it from the columns here. 
 	return [a for (a,b) in classifier.predict_proba(test_df.drop('xgb', axis=1))]
+
+def pairwise_impurity(l_tf_genes, f_matrix, metric):
+	'''
+	Calculates impurity for each possible pair of features.
+	A feature's score is an adjustable function of the ranks of its top and median scores.
+	'''
+
+	def I(p,n, metric):
+		if 0 in (p,n): return 0
+		a, b = p/(p+n), n/(p+n)
+		if metric == 'Entropy': return - a * log(a,2) - b * log(b,2)
+		elif metric == 'Gini': return a * b
+		else: raise Exception('Invalid metric.')
+
+	def split(c_and_i, c_not_i, j_set):
+		'''Split a set of genes using sets i and j.'''
+		cset1 = (c_and_i) & j_set #i and j
+		cset2 = (c_and_i) - cset1 #i not j
+		cset3 = (c_not_i) & j_set #j not i
+		cset4 = (c_not_i) - cset3 #neither i nor j
+		return map(len, (cset1, cset2, cset3, cset4))
+
+	def final_score_function(scores, function):
+		if function == '1': return scores[0]
+		elif function == '2': return np.mean(scores)
+		elif function == '3': return np.mean(scores[:int(len(scores)/2)])
+		elif function == '4': return np.mean([scores[0],np.mean(scores)])
+
+	#Get all possible unique pairs of transcription factors.
+	pairs = [(i,j) for i in f_matrix for j in f_matrix if str(i) > str(j)]
+	
+	#Store the score for each pair in ```pair_results```.
+	pair_results = pd.Series(index=pd.MultiIndex.from_tuples(pairs, names=['tf1','tf2']))
+
+	#Store the score for each transcription factor. 
+	#Since there are four possible final score functions, we need four ```Series```.
+	individual_results1 = pd.Series(index=f_matrix.index)
+	individual_results2 = pd.Series(index=f_matrix.index)
+	individual_results3 = pd.Series(index=f_matrix.index)
+	individual_results4 = pd.Series(index=f_matrix.index)
+
+	#Get the set of genes corresponding to the label library tf.
+	l_tf_genes = set(l_tf_genes)
+
+	#Get the set of genes in all of the feature library.
+	f_lib_genes = set(f_matrix.index)
+
+	#Classify the feature library genes as either in the label library tf set (p), or not (n).
+	#(This is the notation from the 1975 ID3 paper.)
+	p_set = f_lib_genes & l_tf_genes
+	n_set = f_lib_genes - p_set
+
+	#For each feature library tf pair, calculate the info gain resulting from the split.
+	#(The split will produce four subsets whose union is the original sample, l_tf_genes).
+	for i in set(pair_results.index.get_level_values('tf1')):
+		print(i)
+		i_set = set(f_matrix.index[f_matrix[i]])
+		p_and_i, n_and_i = p_set & i_set, n_set & i_set
+		p_not_i, n_not_i = p_set - p_and_i, n_set - n_and_i
+
+		for j in pair_results[i].index:
+			j_set = set(f_matrix.index[f_matrix[j]])
+
+			#Split the label library tf set using sets i and j.
+			#Obtain the sizes of the resulting sets.
+			#This is like obtaining the cell counts from a 2x2 contingency table. 
+			psets = split(p_and_i, p_not_i, j_set)
+
+			#Do the same for the genes in the label library not in the tf set. 
+			nsets = split(n_and_i, n_not_i, j_set)
+
+			#Pair the corresponding sets from p and n. 
+			sets = zip(psets, nsets)
+
+			#Calculate the impurity score and store its value. 
+			pair_results[i,j] = sum([(k[0] + k[1]) * I(k[0], k[1], metric) for k in sets])/(f_matrix.shape[0])
+
+	pair_results.sort_values(inplace=True)
+
+	for tf in f_matrix.columns:
+		print(tf)
+		aggregated_pair_scores = list(pair_results[tf]) + list(pair_results[:,tf])
+		individual_results1[tf] = final_score_function(aggregated_pair_scores, '1')
+		individual_results2[tf] = final_score_function(aggregated_pair_scores, '2')
+		individual_results3[tf] = final_score_function(aggregated_pair_scores, '3')
+		individual_results4[tf] = final_score_function(aggregated_pair_scores, '4')
+
+	return list(individual_results1), list(individual_results2), list(individual_results3), list(individual_results4)

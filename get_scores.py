@@ -75,7 +75,7 @@ def get_methods_and_params(l,f, l_name, f_name):
 	#You must specify ALL the params EXCEPT for l_tf_genes, which is initialized and called later, in enrichment_wrapper().
 	#=====================================================================================================================================
 	df = pd.DataFrame(index=['func', 'params'])
-	df['Fisher_rep_2'] = [m.Fisher, [f]] 
+	df['Pairwise_Gini'] = [m.pairwise_impurity, [f, 'Gini']] 
 
 	return df
 
@@ -101,6 +101,8 @@ def enrichment_wrapper(pair):
 
 		#Some methods actually return multiple results. These will need multiple output files.
 		if mp.name == 'ZAndCombined': output_fnames = (output_heading + '_Z.csv', output_heading + '_Combined.csv')
+		elif mp.name == 'Pairwise_Gini': output_fnames = (output_heading + '_Pair_Gini_1.csv', 
+			output_heading + '_Pair_Gini_2.csv',output_heading + '_Pair_Gini_3.csv',output_heading + '_Pair_Gini_4.csv')
 		else: output_fnames = (output_heading + '_' + mp.name + '.csv',)
 
 		#Check if the file has already been created.
@@ -140,4 +142,4 @@ if __name__ == '__main__':
 
 	#Iterate over each gmt pair.
 	lib_df_pairs = [{'l':all_dfs[a], 'f':all_dfs[b]} for a in all_libs for b in all_libs if a != b]
-	Parallel(n_jobs=6, verbose=0)(delayed(enrichment_wrapper)(pair)for pair in lib_df_pairs)
+	Parallel(n_jobs=1, verbose=0)(delayed(enrichment_wrapper)(pair)for pair in lib_df_pairs)
