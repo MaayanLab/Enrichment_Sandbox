@@ -61,8 +61,7 @@ def comma_sep_to_tab_sep(file):
 # #rename('Classifier','')
 # remove_old_methods_from_ranking_files()
 
-os.chdir('libs')
-for x in os.listdir(os.getcwd()):
-	if '_fisher_classifier_data' in x:
-		print(x)
-		comma_sep_to_tab_sep(x)
+os.chdir('results')
+for result in ['Pair_Gini_ltf100_w_1','Pair_Gini_ltf100_w_5','Pair_Gini_ltf100_w_10','Pair_Gini_ltf100_w_25']:
+	invert(result)
+	remove_this_method_from_ranking_files(result)

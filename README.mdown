@@ -1,3 +1,5 @@
+This README file is NOT up to date.
+
 # Project Summary
 
 The purpose of this project is to evaluate new algorithms for enrichment analysis: the process of identifying known gene sets whose genes are over-represented within a given sample of genes. This is done by performing enrichment between either transcription factor-to-gene or drug-to-gene libraries. 

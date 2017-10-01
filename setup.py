@@ -2,6 +2,7 @@ import requests
 import csv
 import os
 import h5py
+import pickle
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed 
@@ -12,7 +13,7 @@ def open_csv(csv_file):
 def open_gmt(transformed_gmt_file):
 	gmt_name = transformed_gmt_file.partition('_transformed.csv')[0]
 	#Workaroud from bug which called error if keep_default_na=False and index_col=True are both used.
-	df = pd.read_csv(transformed_gmt_file, keep_default_na = False, sep='\t', low_memory=False, encoding='Latin-1')
+	df = pd.read_csv(transformed_gmt_file, keep_default_na = False, na_values=('',), sep='\t', low_memory=False, encoding='Latin-1')
 	df.set_index(df[gmt_name], inplace=True)
 	df.drop([gmt_name], axis=1, inplace=True)
 	return df
@@ -179,5 +180,6 @@ if __name__ == '__main__':
 
 	os.chdir('libs')
 	combine_gmts(['Single_Gene_Perturbations_from_GEO_down', 'Single_Gene_Perturbations_from_GEO_up'], 'CREEDS_transformed.csv')
-	Parallel(n_jobs=2, verbose=0)(delayed(convert_gmt)('df',x) for x in ['ChEA_2016', 'ENCODE_TF_ChIP-seq_2015'])
+	#Parallel(n_jobs=2, verbose=0)(delayed(convert_gmt)('df',x) for x in ['ChEA_2016', 'ENCODE_TF_ChIP-seq_2015'])
+	Parallel(n_jobs=2, verbose=0)(delayed(get_pairwise_sets)(gmt) for gmt in ['ChEA_2016', 'ENCODE_TF_ChIP-seq_2015'])
 	os.chdir('..')

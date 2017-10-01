@@ -11,6 +11,9 @@ from setup import open_csv
 #This is used to assign each method a color for the bridge plots.
 color_dict = {
 	'Fisher': 'black',
+	'Fisher_20': 'black',
+	'Fisher_50': 'black',
+	'Fisher_ltf100': 'black',
 	'Control': 'gray',
 	'Binomial_proportion': 'C0',
 	'RandomForest': 'C2',
@@ -22,8 +25,8 @@ color_dict = {
 	'CombinedFF3':'C2',
 	'CombinedFF4':'C3',
 	'Z': 'C9',
-	'Impurity_Entropy': 'C3',
-	'Impurity_Gini': 'C4',
+	'Entropy': 'C3',
+	'Gini': 'C4',
 	'Forest_ne_5': '#6bd66b',
 	'Forest_ne_25': '#289128',
 	'Forest_ne_50': '#175317',
@@ -52,7 +55,6 @@ color_dict = {
 	'AdaBoost': 'C0',
 	'GradientBoosting': 'C1',
 	'RandomTreesEmbedding': 'C3',
-	'ExtraTrees': 'C4',
 	'XGBoost': 'C5',
 	'LinearSVC':'C6',
 }
@@ -67,6 +69,7 @@ def plot_curve(df, col, prefix):
 	prefix : str
 		Prefix of the file for the column being plotted. Contains the name of the gmt libs. 
 	'''
+	print('plotting')
 	prefix = prefix.replace('Single_Gene_Perturbations_from_GEO_up', 'CREEDS_sep').replace('ENCODE_TF_ChIP-seq_2015', 'ENCODE').replace('_2016','')
 	name = col[0] 
 	#Scale the x_vals here.
@@ -74,13 +77,13 @@ def plot_curve(df, col, prefix):
 	y_vals = df[name + ',y']
 
 	#May insert control statements here to change color, linestyle, etc., as long as plt.plot() is also modified accordingly. 
-	if name == 'Fisher': linewidth=2
-	else: linewidth=1
+	linewidth=2
 
 	if name in color_dict:
 		plt.plot(x_vals, y_vals, label=prefix + name + '    ' + 'AUC: ' 
 			+ str(np.round(auc(x_vals, y_vals), 4)), color=color_dict[name], linewidth=linewidth)
 	else: 
+		print('plotting', name)
 		plt.plot(x_vals, y_vals, label=prefix + name + '    ' + 'AUC: ' 
 			+ str(np.round(auc(x_vals, y_vals), 4)), linewidth=linewidth)
 
@@ -179,20 +182,20 @@ def pairwise_plots(pair):
 
 	#Plot the results for all enrichment methods, if any.
 	if not agg_c.empty:
-		plt.figure(1, figsize=(5,5))
-		font = {'size': 11}
+		plt.figure(1, figsize=(10,10))
+		font = {'size': 12}
 		plt.rc('font', **font)
 		#Plot each enrichment method.
 		for column in agg_c:
 			col = (column.partition(',')[0], column.partition(',')[2])
 			#Filter for only certain enrichment methods here using the below if statement.
-			if col[1] == 'x' and ('Fisher_rep' in col[0] or col[0] in ['Control', 'Fisher', 'RandomForest']):
+			if col[1] == 'x' and '25' in col[0]:
 				plot_curve(agg_c, col, '')
 		plt.title(pair['l'].replace('_up', '_up/dn') + ' to ' + pair['f'].replace('_up', '_up/dn') + ' Bridge Plot')
 		plt.xlabel('Rank')
 		#Uncomment the line below to view only the first few ranks.
 		#plt.gca().set_xlim([0,.10])
-		plt.legend(prop={'size':9}, frameon=False)
+		plt.legend(prop={'size':12}, frameon=False)
 		plt.show()
 	return
 
@@ -253,7 +256,7 @@ def subplots(lib_pairs, all_libs, top_10):
 					for column in agg_c:
 						col = (column.partition(',')[0], column.partition(',')[2])
 						#Use the 'if' statement below to filter out which results you want to view.
-						if col[1] == 'x' and ('Fisher' in col[0] or col[0] in ['Fisher','Control', 'RandomForest',]):
+						if col[1] == 'x' and '_n_' not in col[0] and '_w_' not in col[0]:
 							name = col[0] 
 							x_vals = [a/len(agg_c[name + ',x']) for a in agg_c[name + ',x']]
 							y_vals = agg_c[name + ',y']
@@ -266,7 +269,7 @@ def subplots(lib_pairs, all_libs, top_10):
 							#If you want to view legends for each subplot (e.g. to see the AUC), you will need to un-comment this line.
 							#subplot.legend(fontsize=12)
 			#Uncomment below to scale all subplots equally (to compare relative sizes between subplots).
-			subplot.set_ylim([-.1,.4])
+			subplot.set_ylim([-.1,.5])
 			if top_10: subplot.set_xlim([0,.10])
 			#Only show y-axis on left-most subplots.
 			if j != 0: subplot.yaxis.set_visible(False)
@@ -319,7 +322,7 @@ def hexbin_method_comparison(libs, m1, m2):
 			#Get the coordinates for each hit. 
 			###You can change == to != in order to view the hexbin for all the non-hits i.e. misses.###
 			these_coords = [(ordered_s1.get_loc(x) / s1len, ordered_s2.get_loc(x) / s2len) for 
-				x in ordered_s1 if clean(x) == clean(column)]
+				x in ordered_s1 if clean(x) != clean(column)]
 			#Store them. 
 			coords_collection += these_coords
 		x,y = zip(*coords_collection)
@@ -363,7 +366,7 @@ def hexbin_method_comparison(libs, m1, m2):
 
 if __name__ == '__main__':
 	#Get the libraries, pairs and dataframes. 
-	libs = ['CREEDS', 'ENCODE_TF_ChIP-seq_2015', 'ChEA_2016']
+	libs = ['ENCODE_TF_ChIP-seq_2015', 'ChEA_2016', 'CREEDS']
 	#libs = ['DrugBank', 'CREEDS_Drugs']
 	lib_pairs = [{'l':a, 'f':b} for a in libs for b in libs if a != b]
 	CREEDS_sep_pairs = [{'l':a, 'f':'Single_Gene_Perturbations_from_GEO_up'} for a in libs if a != 'CREEDS'] + [
@@ -372,9 +375,9 @@ if __name__ == '__main__':
 	all_libs = ['Single_Gene_Perturbations_from_GEO_up'] + libs
 	os.chdir('results')
 
-	Parallel(n_jobs=1, verbose=0)(delayed(pairwise_plots)(pair) for pair in all_pairs)
+	Parallel(n_jobs=1, verbose=0)(delayed(pairwise_plots)(pair) for pair in lib_pairs)
 	#combined_plot(all_pairs)
-	subplots(lib_pairs, libs, top_10=False)
-	subplots(lib_pairs, libs, top_10=True)
-	#hexbin_method_comparison(libs, 'Fisher', 'InfoGainGini')
+	#subplots(lib_pairs, libs, top_10=False)
+	#subplots(lib_pairs, libs, top_10=True)
+	hexbin_method_comparison(libs, 'Pair_Gini_ltf100_25', 'Pair_Gini_ltf100_w_25')
 

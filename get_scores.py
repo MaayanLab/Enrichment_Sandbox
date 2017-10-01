@@ -1,5 +1,6 @@
 import csv
 import os
+import pickle
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
@@ -75,8 +76,7 @@ def get_methods_and_params(l,f, l_name, f_name):
 	#You must specify ALL the params EXCEPT for l_tf_genes, which is initialized and called later, in enrichment_wrapper().
 	#=====================================================================================================================================
 	df = pd.DataFrame(index=['func', 'params'])
-	df['Pairwise_Gini'] = [m.pairwise_impurity, [f, 'Gini']] 
-
+	df['Fisher'] = [m.Fisher, [f]] 
 	return df
 
 def enrichment_wrapper(pair):
@@ -101,8 +101,12 @@ def enrichment_wrapper(pair):
 
 		#Some methods actually return multiple results. These will need multiple output files.
 		if mp.name == 'ZAndCombined': output_fnames = (output_heading + '_Z.csv', output_heading + '_Combined.csv')
-		elif mp.name == 'Pairwise_Gini': output_fnames = (output_heading + '_Pair_Gini_1.csv', 
-			output_heading + '_Pair_Gini_2.csv',output_heading + '_Pair_Gini_3.csv',output_heading + '_Pair_Gini_4.csv')
+		elif mp.name == 'Pairwise_Gini': output_fnames = (output_heading + '_Pair_Gini_ltf100_1.csv', 
+			output_heading + '_Pair_Gini_ltf100_5.csv',output_heading + '_Pair_Gini_ltf100_10.csv',output_heading + '_Pair_Gini_ltf100_25.csv')
+		elif mp.name == 'Pairwise_Gini_weighted': output_fnames = (output_heading + '_Pair_Gini_ltf100_w_1.csv', 
+			output_heading + '_Pair_Gini_ltf100_w_5.csv',output_heading + '_Pair_Gini_ltf100_w_10.csv',output_heading + '_Pair_Gini_ltf100_w_25.csv')
+		elif mp.name == 'Pairwise_Gini_nocset4': output_fnames = (output_heading + '_Pair_Gini_ltf100_n_1.csv', 
+			output_heading + '_Pair_Gini_ltf100_n_5.csv',output_heading + '_Pair_Gini_ltf100_n_10.csv',output_heading + '_Pair_Gini_ltf100_n_25.csv')
 		else: output_fnames = (output_heading + '_' + mp.name + '.csv',)
 
 		#Check if the file has already been created.
@@ -130,8 +134,7 @@ def enrichment_wrapper(pair):
 	return
 
 if __name__ == '__main__':
-	all_libs = ['ENCODE_TF_ChIP-seq_2015', 'ChEA_2016', 'CREEDS']
-	#all_libs = ['DrugBank','CREEDS_Drugs']
+	all_libs = ['ENCODE_TF_ChIP-seq_2015_abridged', 'ChEA_2016_abridged', 'CREEDS_abridged']
 
 	#Get dataframes of each gmt library in all_libs
 	os.chdir('libs')
