@@ -2,16 +2,30 @@ import os
 import csv
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 from get_scores import clean, clean_CREEDS_Drugs
+
+color_dict = {'single':'C0', 'intersection':'C1', 'union':'C2', 'minuend':'C3', 'subtrahend':'C4'}
+
+def to_list(series_or_number):
+	if type(series_or_number) == type(pd.Series()): return list(series_or_number)
+	else: return [series_or_number]
 
 def single_results(prefix):
 	os.chdir('results')
-	df = pd.read_csv(prefix + '_Fisher.csv', sep='\t')
+	df = pd.read_csv(prefix + '_Fisher.csv', sep='\t', index_col=0)
 	df.index = [clean(tf) for tf in df.index]
+	hits, misses = [], []
 	for col in df:
 		tf = clean(col)
-		hits += list(df[col,tf])
-		misses += list(df.drop(tf, axis=0)[col]) 
+		if tf in df.index: 
+			#to_hits = df.loc[tf,col]
+			#if type(to_hits) != type(dummy_series): to_hits = [to_hits]
+			#else: to_hits = list(to_hits)
+			hits += to_list(df.loc[tf,col])
+			misses += list(df.drop(tf, axis=0)[col])
+		else: misses += list(df[col])
 	os.chdir('..')
 	return hits, misses
 
@@ -20,15 +34,16 @@ def minus_results(prefix, type):
 	os.chdir('fisher_pairwise_results')
 	for file in os.listdir(os.getcwd()):
 		if file.startswith(prefix):
-			df = pd.open_csv(file, sep='\t', index_col=False)
-			df.index = [clean(x) for x in df.index]
-			tf = clean(file.partition(prefix)[2].partition('_pair_fisher_pvals.csv')[0])
+			df = pd.read_csv(file, sep='\t', index_col=False)
+			df['tfi'] = df['tfi'].apply(clean)
+			df['tfj'] = df['tfj'].apply(clean)
+			tf = clean(file.partition(prefix + '_')[2].partition('_pair_fisher_pvals.csv')[0])
 			if type == 'minuend':
-				hits += list(df.loc[df['i'] == tf]['i minus j']) + list(df.loc[df['j'] == tf]['j minus i']) 
-				misses += list(df.loc[df['i'] != tf]['i minus j']) + list(df.loc[df['j'] != tf]['j minus i']) 
+				hits += to_list(df.loc[df['tfi'] == tf]['i minus j']) + to_list(df.loc[df['tfj'] == tf]['j minus i']) 
+				misses += list(df.loc[df['tfi'] != tf]['i minus j']) + list(df.loc[df['tfj'] != tf]['j minus i']) 
 			elif type == 'subtrahend':
-				hits += list(df.loc[df['i'] == tf]['j minus i']) + list(df.loc[df['j'] == tf]['i minus j']) 
-				misses += list(df.loc[df['i'] != tf]['j minus i']) + list(df.loc[df['j'] != tf]['i minus j']) 
+				hits += to_list(df.loc[df['tfi'] == tf]['j minus i']) + to_list(df.loc[df['tfj'] == tf]['i minus j']) 
+				misses += list(df.loc[df['tfi'] != tf]['j minus i']) + list(df.loc[df['tfj'] != tf]['i minus j']) 
 			else: raise ValueError('invalid type for minus results')
 	os.chdir('..')
 	return hits, misses
@@ -38,11 +53,12 @@ def regular_results(prefix, result_type):
 	os.chdir('fisher_pairwise_results')
 	for file in os.listdir(os.getcwd()):
 		if file.startswith(prefix):
-			df = pd.open_csv(file, sep='\t', index_col=False)
-			df.index = [clean(x) for x in df.index]
-			tf = clean(file.partition(prefix)[2].partition('_pair_fisher_pvals.csv')[0])
-			hits += list(df.loc[df['i'] == tf][result_type]) + list(df.loc[df['j'] == tf][result_type]) 
-			misses += list(df.loc[df['i'] != tf][result_type]) + list(df.loc[df['j'] != tf][result_type]) 
+			df = pd.read_csv(file, sep='\t', index_col=False)
+			df['tfi'] = df['tfi'].apply(clean)
+			df['tfj'] = df['tfj'].apply(clean)
+			tf = clean(file.partition(prefix + '_')[2].partition('_pair_fisher_pvals.csv')[0])
+			hits += to_list(df.loc[df['tfi'] == tf][result_type]) + to_list(df.loc[df['tfj'] == tf][result_type]) 
+			misses += list(df.loc[df['tfi'] != tf][result_type]) + list(df.loc[df['tfj'] != tf][result_type]) 
 	os.chdir('..')
 	return hits, misses
 
@@ -58,10 +74,6 @@ def subplots(lib_pairs, all_libs, result_type):
 	font = {'size':20}
 	plt.rc('font', **font)
 
-	#Collect all the methods found so that we can create a legend at the end.
-	#IMPORTANT: this only works if each lib_pair has the EXACT same plots, e.g. Fisher and Control.
-	methods = pd.Series()
-
 	#Create the grid by iterating over all_libs.
 	for i in range(len(all_libs)):
 		for j in range(len(all_libs)):
@@ -70,7 +82,6 @@ def subplots(lib_pairs, all_libs, result_type):
 			subplot = axarr[i,j]
 			#Check if you want to plot this pair (e.g. you dont want to if f_lib == l_lib).
 			if {'f':f_lib, 'l':l_lib} in lib_pairs:
-				hits, misses = [], []
 				prefix = 'from_' + f_lib + '_to_' + l_lib
 
 				if result_type == 'single': hits, misses = single_results(prefix)
@@ -78,46 +89,44 @@ def subplots(lib_pairs, all_libs, result_type):
 				elif result_type == 'subtrahend': hits, misses = minus_results(prefix, 'subtrahend')
 				else: hits, misses = regular_results(prefix, result_type)
 
-				####left off here
-				if name in color_dict: 
-					methods[name] = subplot.plot(x_vals, y_vals, label=name, color=color_dict[name], linewidth=linewidth)
-				else:
-					methods[name] = subplot.plot(x_vals, y_vals, label=name, linewidth=linewidth)
-					#If you want to view legends for each subplot (e.g. to see the AUC), you will need to un-comment this line.
-					#subplot.legend(fontsize=12)
+				hit_weights = np.ones_like(hits)/float(len(hits))
+				miss_weights = np.ones_like(misses)/float(len(misses))
+				subplot.hist(hits, bins=50, range=(0,1), alpha=0.5, color='C0', label=result_type, weights=hit_weights)
+				subplot.hist(misses, bins=50, range=(0,1), alpha=0.5, color='C1', label=result_type, weights=miss_weights)
 
-
-			#Uncomment below to scale all subplots equally (to compare relative sizes between subplots).
-			subplot.set_ylim([-.1,.5])
-			if top_10: subplot.set_xlim([0,.10])
 			#Only show y-axis on left-most subplots.
 			if j != 0: subplot.yaxis.set_visible(False)
 			#Remove box around the bottom-right subplot (legend will go here.)
-			if j == 2 and i == 2: plt.axis('off')
+			if j == i: 
+				if j == 0: 
+					for side in ['top', 'right', 'bottom', 'left']: subplot.spines[side].set_visible(False)
+					subplot.get_xaxis().set_ticks([])
+				else: subplot.axis('off')
+			#if j == 2 & i == 2: plt.axis('off')
+			#if j == 1 & i == 1: plt.axis('off')
+			subplot.axes.set_ylim(0,.8)
 			#Hide ticks -- although axis='both', this only seems to affect the x-axis.
-			subplot.tick_params(axis='x', which='both', bottom='off', top='off',labelbottom='off')
+			#subplot.tick_params(axis='x', which='both', bottom='off', top='off',labelbottom='off')
 			#Hide ticks on the y axis.
-			#subplot.axes.get_yaxis().set_ticks([])
+			subplot.axes.get_yaxis().set_ticks([0, .4, .8])
 
 	#Label the rows and columns of the figure.
-	print(all_libs)
 	lib_titles = [x.replace('Single_Gene_Perturbations_from_GEO_up', 'CREEDS_sep').replace('ENCODE_TF_ChIP-seq_2015', 'ENCODE').replace('_2016','') for x in all_libs]
 	for ax, col in zip(axarr[0], lib_titles): ax.set_title(col)
 	for ax, row in zip(axarr[:,0], lib_titles): ax.set_ylabel(row, size='large')
 	#Leave some space between the subplots.
-	f.subplots_adjust(hspace=.15, wspace=.1)
+	f.subplots_adjust(hspace=.3, wspace=.1)
 	#Create a legend in the last cell (should be empty, because it is a diagonal).
-	plt.legend([x for sublist in methods.values for x in sublist], methods.index, loc='upper left', ncol=1)
+	handles = [Rectangle((0,0),1,1,color=c,ec="k", alpha=0.5) for c in ['C0','C1']]
+	labels= ['hits','misses']
+	plt.legend(handles, labels)
+	plt.legend()#[x for sublist in histograms.values for x in sublist], histograms.index, loc='upper left', ncol=1)
 	#Title the plot.
-	if top_10: plt.suptitle('Bridge plots from [row] to [column], top 10 percentile of ranks', fontsize=28)
-	else: plt.suptitle('Bridge plots from [row] to [column]', fontsize=32)
+	plt.suptitle('p-value histograms for ' + result_type +' method, from [row] to [column]', fontsize=32)
 	plt.show()
 	return 
 
-
-def minus_results()
-
 all_libs = ['ENCODE_TF_ChIP-seq_2015_abridged', 'ChEA_2016_abridged', 'CREEDS_abridged']
-lib_pairs = [{'f':i,'l':j} for i in libs for j in libs if i != j]
+lib_pairs = [{'f':i,'l':j} for i in all_libs for j in all_libs if i != j]
 for result_type in ('single','intersection','union','minuend', 'subtrahend'):
 	subplots(lib_pairs, all_libs, result_type)
