@@ -24,15 +24,17 @@ def clean(tf):
 def clean_wrapper(i, lib_name):
 	'''More general version of `clean()` which works with drug libraries.'''
 	if lib_name == 'CREEDS_Drugs': 
+		#The library is CREEDS_Drugs.
 		return str(i).partition(' GSE')[0].partition(' ')[0].partition(' ')[0].lower() 
 	elif ('10-05-17' in lib_name) or ('Drug' in lib_name):
+		#The library is some other drug library.
 		return str(i).lower() 
 	else:
-		#must be a transcription factor library
+		#The library is a transcription factor library.
 		return clean(i) 
 
 def get_overlaps(l_lib_name, l_tfs, f_lib_name, f_tfs):
-
+	'''Return the transcription factors in the label library which have matches in the feature library.'''
 	l = {clean_wrapper(i, l_lib_name) for i in l_tfs}
 	f = {clean_wrapper(i, f_lib_name) for i in f_tfs}
 	overlaps = l & f
@@ -60,17 +62,18 @@ def get_methods_and_params(l,f, l_name, f_name):
 	#Otherwise, comment out. 
 	#classifier = get_classifiers(l_name, f_name)
 
-	#=====================================================================================================================================
+	#======================================================================================================================
 	#This is where you choose which enrichment methods to run, and which paramaters to use!
 	#Create a dataframe with index ['method', 'params'], and columns as the names of each enrichment method/param combo.
 	#For example, a column with name 'Foo3' might have 'method' m.Foo() and 'params' bootstrap = False.
 	#See enrichment_methods.py for the available methods and necessary params.
 	#You must specify ALL the params EXCEPT for l_tf_genes, which is initialized and called later, in enrichment_wrapper().
-	#=====================================================================================================================================
+	#======================================================================================================================
 	df = pd.DataFrame(index=['func', 'params'])
 	df['Fisher'] = [m.Fisher, [f]] 
 	df['RandomForest'] = [m.ML_wrapper, [RandomForestClassifier, train_group, features, 101317]]
 	return df
+	#======================================================================================================================
 
 def enrichment_wrapper(pair):
 	'''This function is called for each lib pair, and iterates over each method and each tf. 
@@ -127,21 +130,27 @@ def enrichment_wrapper(pair):
 	return
 
 if __name__ == '__main__':
-	#all_libs = ['ENCODE_TF_ChIP-seq_2015_abridged', 'ChEA_2016_abridged', 'CREEDS_abridged']
-	all_libs = ('1_DrugBank_EdgeList_10-05-17', 
+	tf_libs = ('ENCODE_TF_ChIP-seq_2015_abridged', 'ChEA_2016_abridged', 'CREEDS_abridged')
+	drug_libs = ('1_DrugBank_EdgeList_10-05-17', 
 		'2_TargetCentral_EdgeList_10-05-17',
 		'3_EdgeLists_Union_10-05-17', 
 		'4_EdgeLists_Intersection_10-05-17',
 		'DrugBank',
 		'CREEDS_Drugs')
 
-	#Get dataframes of each gmt library in all_libs
+	#========================================================
+	#Choose which libraries with which to perform enrichment.
+	#========================================================
+	libs = drug_libs
+	#========================================================
+
+	#Get dataframes of each gmt library in libs
 	os.chdir('libs')
-	all_dfs = {x:convert_gmt('df', x) for x in all_libs}
+	all_dfs = {x:convert_gmt('df', x) for x in libs}
 	os.chdir('..')
 	if not os.path.isdir('results'): os.makedirs('results')
 	os.chdir('results')
 
 	#Iterate over each gmt pair.
-	lib_df_pairs = [{'l':all_dfs[a], 'f':all_dfs[b]} for a in all_libs for b in all_libs if a != b]
+	lib_df_pairs = [{'l':all_dfs[a], 'f':all_dfs[b]} for a in libs for b in libs if a != b]
 	Parallel(n_jobs=4, verbose=0)(delayed(enrichment_wrapper)(pair) for pair in lib_df_pairs)
