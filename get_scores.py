@@ -21,31 +21,23 @@ def clean(tf):
 	'''Extracts the transcription factor name from the name of a gmt experiment.'''
 	return str(tf).partition('_')[0].partition(' ')[0].upper()
 
-def get_overlaps(label_tfs, feature_tfs):
-	'''Returns a list of label library experiments whose transcription factors are also in any feature library experiment.
-	label_tfs: list-like object
-	feature_tfs: list-like object
-	'''
-	cleaned_overlaps = {clean(x) for x in feature_tfs} & {clean(x) for x in label_tfs}
-	l_in_overlaps = [x for x in label_tfs if clean(x) in cleaned_overlaps]
-	return l_in_overlaps
+def clean_wrapper(i, lib_name):
+	'''More general version of `clean()` which works with drug libraries.'''
+	if lib_name == 'CREEDS_Drugs': 
+		return str(i).partition(' GSE')[0].partition(' ')[0].partition(' ')[0].lower() 
+	elif ('10-05-17' in lib_name) or ('Drug' in lib_name):
+		return str(i).lower() 
+	else:
+		#must be a transcription factor library
+		return clean(i) 
 
-def clean_CREEDS_Drugs(drug):
-	'''Like clean(), but for drugs.'''
-	return str(drug).partition(' GSE')[0].partition(' ')[0].partition(' ')[0].upper()
+def get_overlaps(l_lib_name, l_tfs, f_lib_name, f_tfs):
 
-def get_drug_overlaps(pair):
-	'''Returns a list of label library experiments whose corresponding drugs are also in any feature library experiment.'''
-	if pair['l'].index.name == 'CREEDS_Drugs': creeds, drugbank = pair['l'], pair['f']
-	else: drugbank, creeds = pair['l'], pair['f']
-	print(creeds.shape, drugbank.shape)
-
-	label_drugs = pair['l'].columns.values
-
-	cleaned_overlaps = {str(x).upper() for x in drugbank.columns.values} & {clean_CREEDS_Drugs(x) for x in creeds.columns.values}
-	if pair['l'].index.name == 'CREEDS_Drugs': l_in_overlaps = [x for x in label_drugs if clean_CREEDS_Drugs(x) in cleaned_overlaps]
-	else: l_in_overlaps = [x for x in label_drugs if x.upper() in cleaned_overlaps]
-	return l_in_overlaps
+	l = {clean_wrapper(i, l_lib_name) for i in l_tfs}
+	f = {clean_wrapper(i, f_lib_name) for i in f_tfs}
+	overlaps = l & f
+	overlaps_in_l = [i for i in l_tfs if clean_wrapper(i, l_lib_name) in overlaps]
+	return overlaps_in_l
 
 def get_methods_and_params(l,f, l_name, f_name):
 	'''
@@ -77,6 +69,7 @@ def get_methods_and_params(l,f, l_name, f_name):
 	#=====================================================================================================================================
 	df = pd.DataFrame(index=['func', 'params'])
 	df['Fisher'] = [m.Fisher, [f]] 
+	df['RandomForest'] = [m.ML_wrapper, [RandomForestClassifier, train_group, features, 101317]]
 	return df
 
 def enrichment_wrapper(pair):
@@ -88,8 +81,8 @@ def enrichment_wrapper(pair):
 	print('Beginning enrichment analysis from', l_name, 'to', f_name)
 
 	#Get the label library experiments whose transcription factors (or drugs) are also in any feature library experiment.
-	if 'Drugs' in l_name: overlaps = get_drug_overlaps(pair)
-	else: overlaps = get_overlaps(pair['l'].columns.values, pair['f'].columns.values)
+	overlaps = get_overlaps(l_name, pair['l'].columns.values, f_name, pair['f'].columns.values)
+	print(str(len(overlaps)), 'overlaps')
 
 	#Get the methods and parameters with which to perform enrichment. 
 	methods_and_params = get_methods_and_params(pair['l'], pair['f'], l_name, f_name)
@@ -134,7 +127,13 @@ def enrichment_wrapper(pair):
 	return
 
 if __name__ == '__main__':
-	all_libs = ['ENCODE_TF_ChIP-seq_2015_abridged', 'ChEA_2016_abridged', 'CREEDS_abridged']
+	#all_libs = ['ENCODE_TF_ChIP-seq_2015_abridged', 'ChEA_2016_abridged', 'CREEDS_abridged']
+	all_libs = ('1_DrugBank_EdgeList_10-05-17', 
+		'2_TargetCentral_EdgeList_10-05-17',
+		'3_EdgeLists_Union_10-05-17', 
+		'4_EdgeLists_Intersection_10-05-17',
+		'DrugBank',
+		'CREEDS_Drugs')
 
 	#Get dataframes of each gmt library in all_libs
 	os.chdir('libs')
@@ -145,4 +144,4 @@ if __name__ == '__main__':
 
 	#Iterate over each gmt pair.
 	lib_df_pairs = [{'l':all_dfs[a], 'f':all_dfs[b]} for a in all_libs for b in all_libs if a != b]
-	Parallel(n_jobs=1, verbose=0)(delayed(enrichment_wrapper)(pair)for pair in lib_df_pairs)
+	Parallel(n_jobs=4, verbose=0)(delayed(enrichment_wrapper)(pair) for pair in lib_df_pairs)

@@ -12,10 +12,10 @@ def open_csv(csv_file):
 
 def open_gmt(transformed_gmt_file):
 	gmt_name = transformed_gmt_file.partition('_transformed.csv')[0]
-	#Workaroud from bug which called error if keep_default_na=False and index_col=True are both used.
-	df = pd.read_csv(transformed_gmt_file, keep_default_na = False, na_values=('',), sep='\t', low_memory=False, encoding='Latin-1')
-	df.set_index(df[gmt_name], inplace=True)
-	df.drop([gmt_name], axis=1, inplace=True)
+	#Workaroud from bug which called error if keep_default_na=False and index_col=0 are both used.
+	df = pd.read_csv(transformed_gmt_file, keep_default_na = False, na_values=('',), sep='\t', low_memory=False, encoding='Latin-1', index_col=0)
+	#df.set_index(df[gmt_name], inplace=True)
+	#df.drop([gmt_name], axis=1, inplace=True)
 	return df
 
 def file_exists(f_name):

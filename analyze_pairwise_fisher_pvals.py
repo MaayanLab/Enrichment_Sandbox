@@ -10,10 +10,17 @@ from get_scores import clean, clean_CREEDS_Drugs
 color_dict = {'single':'C0', 'intersection':'C1', 'union':'C2', 'minuend':'C3', 'subtrahend':'C4'}
 
 def to_list(series_or_number):
+	'''convert something that might either be a number or a Series object to a list.'''
+	#if it's a Series, use list()
 	if type(series_or_number) == type(pd.Series()): return list(series_or_number)
+	#otherwise, use []. 
 	else: return [series_or_number]
 
 def single_results(prefix):
+	'''
+	Get the p values for the single method (i.e. regular Fisher's test). 
+	This data is already saved in a csv. So, just load it and differentiate hits from misses. 
+	'''
 	os.chdir('results')
 	df = pd.read_csv(prefix + '_Fisher.csv', sep='\t', index_col=0)
 	df.index = [clean(tf) for tf in df.index]
