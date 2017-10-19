@@ -2,7 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from get_scores import clean, clean_CREEDS_Drugs
+from get_scores import clean, clean_wrapper
 from sklearn.metrics import auc
 from joblib import Parallel, delayed
 from collections import Counter
@@ -59,6 +59,11 @@ color_dict = {
 	'LinearSVC':'C6',
 }
 
+def shorten_libname(libname):
+	libname = libname.replace('Single_Gene_Perturbations_from_GEO_up', 'CREEDS_sep').replace('ENCODE_TF_ChIP-seq_2015', 'ENCODE')
+	libname = libname.replace('_2016','').replace('_10-05-17', '')
+	return libname
+
 def plot_curve(df, col, prefix):
 	'''
 	This helper function plots a single bridge plot curve.
@@ -70,7 +75,7 @@ def plot_curve(df, col, prefix):
 		Prefix of the file for the column being plotted. Contains the name of the gmt libs. 
 	'''
 	print('plotting')
-	prefix = prefix.replace('Single_Gene_Perturbations_from_GEO_up', 'CREEDS_sep').replace('ENCODE_TF_ChIP-seq_2015', 'ENCODE').replace('_2016','')
+	prefix = shorten_libname(prefix)
 	name = col[0] 
 	#Scale the x_vals here.
 	x_vals = [a/len(df[name + ',x']) for a in df[name + ',x']]
@@ -99,6 +104,10 @@ def pairwise_plots(pair):
 		However, this function can also be used to take the best score between two score files.
 		In this case, file should use the up-reguated genes, and dn_file should use the down-reguated genes (from CREEDS).
 		'''
+
+		l_lib = file.partition('_to_')[0].partition('from_')[2]
+		f_lib = file.rpartition('_')[0].partition('_to_')[2]
+
 		ranks_collection = []
 		scores = open_csv(file)
 		if dn_file is not None: dn = open_csv(dn_file)
@@ -112,13 +121,11 @@ def pairwise_plots(pair):
 			else:
 				#Sort the feature library experiments by their scores.
 				ordered_tfs = scores[column].sort_values().index
-			#Get the indices of the feature library experiments which match the label library tf.
-			if 'from_DrugBank' in file: 
-				these_ranks = [ordered_tfs.get_loc(x) for x in ordered_tfs if clean_CREEDS_Drugs(x) == column.upper()]
-			elif 'from_CREEDS_Drugs' in file:
-				these_ranks = [ordered_tfs.get_loc(x) for x in ordered_tfs if x.upper() == clean_CREEDS_Drugs(column)]
-			else: these_ranks = [ordered_tfs.get_loc(x) for x in ordered_tfs if clean(x) == clean(column)]
+
+			col_clean = clean_wrapper(column, l_lib)
+			these_ranks = [ordered_tfs.get_loc(x) for x in ordered_tfs if clean_wrapper(x, f_lib) == col_clean]
 			ranks_collection += these_ranks
+
 		#Return scores.shape too, which will be needed to make the graph.
 		#(scores.shape should be identical between the different methods)
 		return ranks_collection, scores.shape
@@ -189,7 +196,7 @@ def pairwise_plots(pair):
 		for column in agg_c:
 			col = (column.partition(',')[0], column.partition(',')[2])
 			#Filter for only certain enrichment methods here using the below if statement.
-			if col[1] == 'x' and '25' in col[0]:
+			if col[1] == 'x':
 				plot_curve(agg_c, col, '')
 		plt.title(pair['l'].replace('_up', '_up/dn') + ' to ' + pair['f'].replace('_up', '_up/dn') + ' Bridge Plot')
 		plt.xlabel('Rank')
@@ -233,7 +240,7 @@ def subplots(lib_pairs, all_libs, top_10):
 	all_libs : list-like
 		the gmt libraries in lib_pairs
 	'''
-	f, axarr = plt.subplots(nrows=len(all_libs),ncols=len(all_libs), figsize=(15,15))
+	f, axarr = plt.subplots(nrows=len(all_libs),ncols=len(all_libs), figsize=(35,35))
 	font = {'size':20}
 	plt.rc('font', **font)
 
@@ -263,13 +270,13 @@ def subplots(lib_pairs, all_libs, top_10):
 
 							linewidth = 2.5
 							if name in color_dict: 
-								methods[name] = subplot.plot(x_vals, y_vals, label=name, color=color_dict[name], linewidth=linewidth)
+								methods[name] = subplot.plot(x_vals, y_vals, label=name + ' ' + str(np.round(auc(x_vals, y_vals), 4)), color=color_dict[name], linewidth=linewidth)
 							else:
-								methods[name] = subplot.plot(x_vals, y_vals, label=name, linewidth=linewidth)
+								methods[name] = subplot.plot(x_vals, y_vals, label=name + ' ' + str(np.round(auc(x_vals, y_vals), 4)), linewidth=linewidth)
 							#If you want to view legends for each subplot (e.g. to see the AUC), you will need to un-comment this line.
-							#subplot.legend(fontsize=12)
+							subplot.legend(fontsize=12, loc='upper right')
 			#Uncomment below to scale all subplots equally (to compare relative sizes between subplots).
-			subplot.set_ylim([-.1,.5])
+			subplot.set_ylim([-.2,1])
 			if top_10: subplot.set_xlim([0,.10])
 			#Only show y-axis on left-most subplots.
 			if j != 0: subplot.yaxis.set_visible(False)
@@ -282,7 +289,7 @@ def subplots(lib_pairs, all_libs, top_10):
 
 	#Label the rows and columns of the figure.
 	print(all_libs)
-	lib_titles = [x.replace('Single_Gene_Perturbations_from_GEO_up', 'CREEDS_sep').replace('ENCODE_TF_ChIP-seq_2015', 'ENCODE').replace('_2016','') for x in all_libs]
+	lib_titles = [shorten_libname(x) for x in all_libs]
 	for ax, col in zip(axarr[0], lib_titles): ax.set_title(col)
 	for ax, row in zip(axarr[:,0], lib_titles): ax.set_ylabel(row, size='large')
 	#Leave some space between the subplots.
@@ -354,7 +361,7 @@ def hexbin_method_comparison(libs, m1, m2):
 			#Hide ticks on the y axis.
 			subplot.axes.get_yaxis().set_ticks([])
 
-	lib_titles = [x.replace('Single_Gene_Perturbations_from_GEO_up', 'CREEDS_sep').replace('ENCODE_TF_ChIP-seq_2015', 'ENCODE').replace('_2016','') for x in all_libs]
+	lib_titles = [shorten_libname(x) for x in all_libs]
 	for ax, col in zip(axarr[0], lib_titles): ax.set_title(col)
 	for ax, row in zip(axarr[:,0], lib_titles): ax.set_ylabel(row, size='large')
 	#Leave some space between the subplots.
@@ -365,19 +372,34 @@ def hexbin_method_comparison(libs, m1, m2):
 	return 
 
 if __name__ == '__main__':
-	#Get the libraries, pairs and dataframes. 
-	libs = ['ENCODE_TF_ChIP-seq_2015', 'ChEA_2016', 'CREEDS']
-	#libs = ['DrugBank', 'CREEDS_Drugs']
+	tf_libs = ['ENCODE_TF_ChIP-seq_2015_abridged', 'ChEA_2016_abridged', 'CREEDS_abridged']
+	drug_libs = ['1_DrugBank_EdgeList_10-05-17', 
+		'2_TargetCentral_EdgeList_10-05-17',
+		'3_EdgeLists_Union_10-05-17', 
+		'4_EdgeLists_Intersection_10-05-17',
+		'DrugBank',
+		'CREEDS_Drugs',
+		'DrugMatrix']
+
+	#========================================================
+	#Choose which libraries with which to perform enrichment.
+	#========================================================
+	libs = drug_libs
+	#========================================================
+
 	lib_pairs = [{'l':a, 'f':b} for a in libs for b in libs if a != b]
+
+	#Handle the separate results for CREEDS, if applicable. 
 	CREEDS_sep_pairs = [{'l':a, 'f':'Single_Gene_Perturbations_from_GEO_up'} for a in libs if a != 'CREEDS'] + [
 	{'l':'Single_Gene_Perturbations_from_GEO_up', 'f':b} for b in libs if b != 'CREEDS']
 	all_pairs = lib_pairs + CREEDS_sep_pairs
 	all_libs = ['Single_Gene_Perturbations_from_GEO_up'] + libs
+
 	os.chdir('results')
 
-	Parallel(n_jobs=1, verbose=0)(delayed(pairwise_plots)(pair) for pair in lib_pairs)
+	#Parallel(n_jobs=1, verbose=0)(delayed(pairwise_plots)(pair) for pair in lib_pairs)
 	#combined_plot(all_pairs)
-	#subplots(lib_pairs, libs, top_10=False)
-	#subplots(lib_pairs, libs, top_10=True)
-	hexbin_method_comparison(libs, 'Pair_Gini_ltf100_25', 'Pair_Gini_ltf100_w_25')
+	subplots(lib_pairs, libs, top_10=False)
+	subplots(lib_pairs, libs, top_10=True)
+	#hexbin_method_comparison(libs, 'Pair_Gini_ltf100_25', 'Pair_Gini_ltf100_w_25')
 

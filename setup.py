@@ -117,6 +117,25 @@ def combine_gmts(gmts, output_fname):
 	df.to_csv(output_fname, sep='\t')
 	return
 
+def combine_paired_csv(input_fname, output_fname, merge_type='union'):
+	'''
+	Takes a transformed gmt where adjacent columns are paired, i.e. (1,2),(3,4),(5,6), and merges each pair.
+	example: up/down columns for the same experiment.
+	'''
+	old_df = open_csv(input_fname + '_transformed.csv')
+	old_df.fillna(False, inplace=True)
+	new_df = pd.DataFrame(index=old_df.index)
+	dn_cols = list(old_df.columns)[::2]
+	for dn_col in dn_cols:
+		print(dn_col)
+		col = str(dn_col).rpartition('-dn')[0]
+		up_col = col + '-up'
+		if up_col not in old_df.columns: raise ValueError(up_col)
+		if merge_type == 'union': new_df[col] = old_df[dn_col] | old_df[up_col]
+		elif merge_type == 'intersection': new_df[col] = old_df[dn_col] & old_df[up_col]
+		else: raise ValueError('invalid merge type: ' + merge_type)
+	new_df.to_csv(output_fname + '_transformed.csv', sep='\t')
+
 def download_file(url, output_fname):
 	if file_exists(output_fname): return
 	r = requests.get(url, stream=True)
@@ -179,7 +198,9 @@ def get_ARCHS4_correlation_matrices(lib):
 if __name__ == '__main__':
 
 	os.chdir('libs')
-	combine_gmts(['Single_Gene_Perturbations_from_GEO_down', 'Single_Gene_Perturbations_from_GEO_up'], 'CREEDS_transformed.csv')
+	#combine_gmts(['Single_Gene_Perturbations_from_GEO_down', 'Single_Gene_Perturbations_from_GEO_up'], 'CREEDS_transformed.csv')
 	#Parallel(n_jobs=2, verbose=0)(delayed(convert_gmt)('df',x) for x in ['ChEA_2016', 'ENCODE_TF_ChIP-seq_2015'])
-	Parallel(n_jobs=2, verbose=0)(delayed(get_pairwise_sets)(gmt) for gmt in ['ChEA_2016', 'ENCODE_TF_ChIP-seq_2015'])
+	#convert_gmt('df', 'DrugMatrix')
+	#Parallel(n_jobs=2, verbose=0)(delayed(get_pairwise_sets)(gmt) for gmt in ['ChEA_2016', 'ENCODE_TF_ChIP-seq_2015'])
+	combine_paired_csv('DrugMatrix', 'DrugMatrix_Union', merge_type='union')
 	os.chdir('..')

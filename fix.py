@@ -52,6 +52,15 @@ def remove_this_method_from_ranking_files(method):
 def comma_sep_to_tab_sep(file):
 	x = pd.read_csv(file, index_col=0, sep=',', low_memory=False, keep_default_na=False, encoding='Latin-1')
 	x.to_csv(file, sep='\t')
+
+def remove_this_library_from_results(lib, rm_folder='to_trash'):
+	if not os.path.exists(rm_folder):
+		os.makedirs(rm_folder)
+	for x in os.listdir(os.getcwd()):
+		if lib in x:
+			print(x)
+			os.rename(x, rm_folder + '\\' + x)
+
 	
 # os.chdir('results')
 # rename('RandomForest.csv','BadRForest.csv')
@@ -62,6 +71,4 @@ def comma_sep_to_tab_sep(file):
 # remove_old_methods_from_ranking_files()
 
 os.chdir('results')
-for result in ['Pair_Gini_ltf100_w_1','Pair_Gini_ltf100_w_5','Pair_Gini_ltf100_w_10','Pair_Gini_ltf100_w_25']:
-	invert(result)
-	remove_this_method_from_ranking_files(result)
+rename('DrugMatrix_Union', 'DrugMatrix')

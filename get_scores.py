@@ -24,17 +24,21 @@ def clean(tf):
 def clean_wrapper(i, lib_name):
 	'''More general version of `clean()` which works with drug libraries.'''
 	if lib_name == 'CREEDS_Drugs': 
-		#The library is CREEDS_Drugs.
 		return str(i).partition(' GSE')[0].partition(' ')[0].partition(' ')[0].lower() 
+	elif 'DrugMatrix' in lib_name:
+		for parser in ('mg/kg', '_uM_', 'ng/ml'):
+			if parser in i:
+				return str(i).partition(parser)[0].rpartition('-')[0].lower()
+		raise ValueError(i + ' could not be parsed.')
 	elif ('10-05-17' in lib_name) or ('Drug' in lib_name):
 		#The library is some other drug library.
 		return str(i).lower() 
 	else:
 		#The library is a transcription factor library.
-		return clean(i) 
+		return clean(i)
 
 def get_overlaps(l_lib_name, l_tfs, f_lib_name, f_tfs):
-	'''Return the transcription factors in the label library which have matches in the feature library.'''
+	'''Return the experiments in the label library which have matches in the feature library.'''
 	l = {clean_wrapper(i, l_lib_name) for i in l_tfs}
 	f = {clean_wrapper(i, f_lib_name) for i in f_tfs}
 	overlaps = l & f
@@ -45,9 +49,9 @@ def get_methods_and_params(l,f, l_name, f_name):
 	'''
 	Returns a dataframe with methods and their parameters.
 	l : pandas.DataFrame
-		the "label" gmt library, from which tfs are being used as input gene sets
+		the "label" gmt library, from which experiments are being used as input gene sets
 	f: pandas.DataFrame
-		the "feature" gmt library, whose tfs are being ranked by the enrichment method
+		the "feature" gmt library, whose experiments are being ranked by the enrichment method
 	l_name : str
 		the name of l, for example "ChEA_2016"
 	f_name: str
@@ -136,7 +140,9 @@ if __name__ == '__main__':
 		'3_EdgeLists_Union_10-05-17', 
 		'4_EdgeLists_Intersection_10-05-17',
 		'DrugBank',
-		'CREEDS_Drugs')
+		'CREEDS_Drugs',
+		'DrugMatrix_Union',
+		)
 
 	#========================================================
 	#Choose which libraries with which to perform enrichment.
