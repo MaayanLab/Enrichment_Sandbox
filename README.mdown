@@ -125,9 +125,11 @@ In other words, we take each tf from the `label library`, and perform enrichment
 
 
 ### Construction and interpretation of the bridge plots:
+
 <div style="display:inline">
-<img src="README images/auc.png"/>
+<img src="README images/auc.png" width="300"/>
 </div>
+
 * The ranks of the "matching" experiments are collected.
 * At every x-value after zero, the y-value decreases at a constant rate.
 * At every x-value, the y value also increases proportionally to the number of "matching" ranks which occured at that x-value.
