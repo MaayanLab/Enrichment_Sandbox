@@ -1,66 +1,82 @@
 # Project Summary
 
-The purpose of this project is to evaluate new algorithms for enrichment analysis: the process of identifying known gene sets whose genes are over-represented within a given sample of genes. This is done by performing enrichment between either transcription factor-to-gene or drug-to-gene libraries. 
+Enrichment analysis algorithms identify known, annotated gene sets which share many genes in common with an input gene set. The input gene set might be a list of differentially-expressed genes from a biological experiment (e.g. treating both a cancerous cell line and a healthy cell line with a drug, and looking at which genes are expressed differently using RNA-seq), while the annotations of the known gene sets might be transcription factor binding sites, drug targets, or biological processes. Thus, enrichment analysis can be used as a tool to learn about the biological interconnectedness of a set of genes. 
 
-The benchmarking process is as follows: Two libraries, A and B, are chosen. Terms which correspond to transcription factors (or drugs) which are in both libraries are identified. Then, the gene sets of those common terms from library A are used to perform enrichment into library B. For each common term in library A, the algorithm returns a ranking of all terms in library B, from most enriched to least enriched. Since these libraries should agree with one another, we expect that the library B term(s) corresponding to the same transcription factor (or drug) as the input term from library A will appear towards the top of the rankings. So a good algorithm will consistently rank matching terms highly, while a bad algorithm will not. Bridge plots are created to qualitatively evaulate this.
+The purpose of this project is to evaluate new algorithms for enrichment analysis. It only considers algorithms which begin with an input gene set, and not with the original gene expression data. It evaluates these algorithms by benchmarking their results using annotated transcription factor-to-gene or drug-to-gene libraries as inputs. 
 
-## The following methods have been implemented:
-* A control
+The benchmarking process is as follows: Two libraries, A and B, are chosen. Terms which correspond to transcription factors (or drugs) which are present in both libraries are identified. Then, one at a time, the gene sets of those common terms from library A are used to perform enrichment into all of library B. For each common term in library A, the algorithms return a ranking of all terms in library B, from most enriched to least enriched. Since these libraries should agree with one another, we expect that the library B term(s) corresponding to the same transcription factor (or drug) as the input term from library A will appear toward the top of the rankings. Therefore, a good algorithm will consistently rank these matching terms highly, while a bad algorithm will not. "Bridge plots" are created to qualitatively evaulate this.
+
+## Algorithms
+
+The following algorithms have been implemented:
+
+* A control, which returns a random ranking of the gene sets
 * Fisher's exact test
 * Binomial proportions test
 * Z score and Combined score from the Enrichr API
 * Gini Impurity and Entropy
-* RandomForest, ExtraTrees, RandomTreesEmbedding, GradientBoosting and AdaBoost from sklearn.ensemble
-* LinearSVC from sklearn.svm
-* XGBoost from the DMLC
-	* Above machine learning methods use feature importances to rank gene sets based on a classifier which predicts whether genes in the library also belong to the input gene set
-* Recursive variants of the above machine learning methods
-* Mixtures of the above methods, i.e. score averaging, gene set elimination.
-* Above machine learning methods, but using a classifier that predicts whether or not a gene set is enriched based on Fisher contingency table values and other scores (e.g. Fisher p value, Gini impurity)
+	* Pairwise variant of the above methods, which splits on two terms at a time
+* Machine learning methods, which build a classifier that predicts whether genes in library B also belong to the input gene set, and then uses feature importances to rank the library B gene sets:
+	* RandomForest, ExtraTrees, RandomTreesEmbedding, GradientBoosting and AdaBoost from sklearn.ensemble
+	* LinearSVC from sklearn.svm
+	* XGBoost from the DMLC
+	* Recursive variants of the above machine learning methods
+	* *Deprecated: Above machine learning methods, but using a classifier that predicts whether or not a gene set is enriched based on Fisher contingency table values and other scores (e.g. Fisher p value, Gini impurity)*
+* Mixtures of the above methods, i.e. score averaging and gene set elimination.
 * *Deprecated: Fisher's exact test adjusted with gene-gene correlation data from ARCHS4* 
 
-## The following visualizations are available:
-* Bridge plot for a library pair, comparing the rankings of different methods.
-* Combined bridge plot showing all results for all library pairs.
+## Visualizations
+
+The following visualizations are available: 
+
+* All bridge plots for a single library pair, comparing the rankings of different methods.
+* A combined plot showing all bridge plots for all library pairs.
 * An array of bridge plots, with each library pair in its own subplot.
 * An array of hexbin plots (a kind of bivariate histogram), with each library pair in its own subplot.
-	* These are useful for comparing how two different algorithms rank the same matches.
+	* These are useful for comparing how two different algorithms rank the same terms.
 
 The bridge plots can be zoomed-in to view only the top ranks, and filtered to view only certain methods.
 
 <div style="display:inline">
-<img src="sample_result_sklearn.png"/>
-<img src="sample_result_drugs.png"/>
+<img src="README images/sklearn.png"/>
+<img src="README images/drugs.png"/>
 </div>
 <div style="display:inline">
-<img src="sample_result_hexbin.png"/>
-<img src="sample_result_grid.png"/>
+<img src="README images/hexbin.png"/>
+<img src="README images/grid.png"/>
 </div>
 
-## The following libraries are being used for benchmarking:
+## Libraries
+
+The following libraries are used for benchmarking:
 
 * Transcription factor libraries:
-	* ChEA: ChIP-seq experiments
-	* ENCODE: ChIP-seq experiments
-	* CREEDS: single-gene perturbation signatures from the Gene Expression Omnibus
+	* [ChEA](https://www.ncbi.nlm.nih.gov/pubmed/20709693): infers transcription factor binding sites using ChIP-X experiment data manually collected from scientific publications.
+	* [ENCODE](https://www.encodeproject.org/): infers transcription factor binding sites using ChIP-seq experiments performed by the ENCODE project.
+	* [CREEDS](https://www.ncbi.nlm.nih.gov/pubmed/27667448): infers single-gene perturbation signatures using microarray data extracted and processed from the Gene Expression Omnibus by crowdsource.
 * Drug libraries:
-	* DrugBank: drug-to-drug target library
-	* CREEDS: drug perturbation signatures from the Gene Expression Omnibus
+	* [DrugBank](https://www.drugbank.ca/): encyclopedia-like database of drugs and their targets based on scientific publications.
+	* [CREEDS](https://www.ncbi.nlm.nih.gov/pubmed/27667448): infers drug-gene associations using drug perturbation signatures extracted and processed from the Gene Expression Omnibus by crowdsource.
 
 # How to Use:
 
 1. Run `setup.py`.
 2. `get_scores.py` has a function called `get_methods()`. In here, fill a `pandas.DataFrame` with functions and parameters from `enrichment_methods.py` which you want to use. Then, run `get_scores.py`.
-3. Run `evaluate_scores.py` to save ranking scores to results files and plot them.
+3. Run `evaluate_scores.py` to save ranking scores to results files, and to plot the rankings.
 * `fix.py` can be used to make adjustments such as renaming methods, reversing scores, and resetting the results files.
-* `new_scores_from_old.py` can be used to create new scores from old score files.
 * `log.py` is a log of experiments I've personally done, for my own reference. 
+
+Scripts I have used previously are in the `old scripts` folder. To use these, move them to the main directory. They are deprecated and may no longer work:
+* `get_pairwise_fisher_pvals.py` and `analyze_pairwise_fisher_pvals.py` were used to perform and explore the results of pairwise enrichment analysis (evaluating the degree of enrichment of a pair of terms at a time, instead of a single term) using the Fisher's exact test.
+* `create_abridged_libs.py` makes a new gmt which has only the first n terms of an old gmt. This was used to quickly test out enrichment methods that take a long time to run, such as the pairwise methods.
+* `edgelist_to_gmt.py` was used to create gmts from drug library edgelists.
+* `new_scores_from_old.py` can be used to create new scores from old score files.
 * `get_classifiers.py` is a helper function needed if a `ML_Fisher_features` method is used. 
-* *Deprecated: `get_fisher_adjusted_vars.py` is used to get and view the correlation data for the adjusted Fisher's test.*
+* `get_fisher_adjusted_vars.py` was used to get and view the correlation data for the adjusted Fisher's test.
 
 # More details:
 
-(Note: If drugs are being used, simply replace "transcription factor" with "drug" in the following passages.)
+(Note: If drug libraries are being used, simply replace "transcription factor" with "drug" in the following passages.)
 
 ### What happens behind the scenes, in pseudocode:
 

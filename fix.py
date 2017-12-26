@@ -62,13 +62,12 @@ def remove_this_library_from_results(lib, rm_folder='to_trash'):
 			os.rename(x, rm_folder + '\\' + x)
 
 	
-# os.chdir('results')
-# rename('RandomForest.csv','BadRForest.csv')
-# rename('RandomForest_rep.csv','RandomForest.csv')
-# #invert('InfoGainEntropy')
-# #remove_this_method_from_ranking_files('ExtraTrees')
-# #rename('Classifier','')
-# remove_old_methods_from_ranking_files()
-
 os.chdir('results')
-rename('DrugMatrix_Union', 'DrugMatrix')
+
+# Sample Usage:
+	# rename('RandomForest.csv','BadRForest.csv')
+	# rename('RandomForest_rep.csv','RandomForest.csv')
+	# #invert('InfoGainEntropy')
+	# #remove_this_method_from_ranking_files('ExtraTrees')
+	# #rename('Classifier','')
+	# remove_old_methods_from_ranking_files()
