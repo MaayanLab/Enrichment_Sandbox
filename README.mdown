@@ -127,7 +127,7 @@ In other words, we take each tf from the `label library`, and perform enrichment
 ### Construction and interpretation of the bridge plots:
 
 <div style="display:inline">
-<img src="README images/auc.png" width="300"/>
+<img src="README images/auc.png" width="600"/>
 </div>
 
 * The ranks of the "matching" experiments are collected.
