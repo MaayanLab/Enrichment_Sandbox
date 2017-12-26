@@ -125,7 +125,9 @@ In other words, we take each tf from the `label library`, and perform enrichment
 
 
 ### Construction and interpretation of the bridge plots:
-![Sample result AUC](sample_result_auc.png?raw=true)
+<div style="display:inline">
+<img src="README images/auc.png"/>
+</div>
 * The ranks of the "matching" experiments are collected.
 * At every x-value after zero, the y-value decreases at a constant rate.
 * At every x-value, the y value also increases proportionally to the number of "matching" ranks which occured at that x-value.
@@ -140,9 +142,7 @@ A good ranking method will result in a bridge plot with a large area underneath 
 
 # Future Directions
 
-* Double-check correctness of code
-* Clean code
-* Make adding new libraries easier
+* Document gmt file creation for drug libraries
 * Automate and continue hyperparmater search
 * More combos of methods
 * Linear SVC, KNN for ML on Fisher info
