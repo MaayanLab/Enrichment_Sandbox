@@ -1,21 +1,23 @@
 # Project Summary
 
-Enrichment analysis algorithms identify known, annotated gene sets which share many genes in common with an input gene set. The input gene set might be a list of differentially-expressed genes from a biological experiment (e.g. treating both a cancerous cell line and a healthy cell line with a drug, and looking at which genes are expressed differently using RNA-seq), while the annotations of the known gene sets might be transcription factor binding sites, drug targets, or biological processes. Thus, enrichment analysis can be used as a tool to learn about the biological interconnectedness of a set of genes. 
+Enrichment analysis algorithms identify known, annotated gene sets which share many genes in common with an input gene set. The input gene set might be a list of differentially-expressed genes from a biological experiment (e.g. treating both a cancerous cell line and a healthy cell line with a drug, and identifying genes with the greatest difference in expression levels using RNA-seq), while the annotations of the known gene sets might be transcription factor binding sites, drug targets, or biological processes. By associating the annotations of the most similar known gene sets to the input gene set, a scientist can use enrichment analysis to learn about the biological interconnectedness of the input gene set. 
 
 The purpose of this project is to evaluate new algorithms for enrichment analysis. It only considers algorithms which begin with an input gene set, and not with the original gene expression data. It evaluates these algorithms by benchmarking their results using annotated transcription factor-to-gene or drug-to-gene libraries as inputs. 
 
-The benchmarking process is as follows: Two libraries, A and B, are chosen. Terms which correspond to transcription factors (or drugs) which are present in both libraries are identified. Then, one at a time, the gene sets of those common terms from library A are used to perform enrichment into all of library B. For each common term in library A, the algorithms return a ranking of all terms in library B, from most enriched to least enriched. Since these libraries should agree with one another, we expect that the library B term(s) corresponding to the same transcription factor (or drug) as the input term from library A will appear toward the top of the rankings. Therefore, a good algorithm will consistently rank these matching terms highly, while a bad algorithm will not. "Bridge plots" are created to qualitatively evaulate this.
+The benchmarking process is as follows: Two libraries, A and B, are chosen. Terms which correspond to transcription factors (or drugs) which are present in both libraries are identified. Then, one at a time, the gene sets of those common terms from library A are used as input gene sets to perform enrichment into all of library B. For each common term in library A, the algorithms return a ranking of all terms in library B (the known gene sets), from most enriched to least enriched. Since these libraries should agree with one another, we expect that the library B term(s) corresponding to the same transcription factor (or drug) as the input term from library A will appear toward the top of the rankings. Therefore, a good algorithm will consistently rank these matching terms highly, while a bad algorithm will not. "Bridge plots" are created to qualitatively evaulate this.
+
+[Here is a link to a video explanation of this project from August 2017.](https://www.youtube.com/watch?v=IyDvGPtHP7U)
 
 ## Algorithms
 
-The following algorithms have been implemented:
+These enrichment analysis algorithms have been implemented:
 
-* A control, which returns a random ranking of the gene sets
+* A control, which returns a random ranking of the known gene sets
 * Fisher's exact test
 * Binomial proportions test
 * Z score and Combined score from the Enrichr API
 * Gini Impurity and Entropy
-	* Pairwise variant of the above methods, which splits on two terms at a time
+	* A pairwise variant of the above methods, which splits on two terms at a time
 * Machine learning methods, which build a classifier that predicts whether genes in library B also belong to the input gene set, and then uses feature importances to rank the library B gene sets:
 	* RandomForest, ExtraTrees, RandomTreesEmbedding, GradientBoosting and AdaBoost from sklearn.ensemble
 	* LinearSVC from sklearn.svm
@@ -27,7 +29,7 @@ The following algorithms have been implemented:
 
 ## Visualizations
 
-The following visualizations are available: 
+These visualizations are available: 
 
 * All bridge plots for a single library pair, comparing the rankings of different methods.
 * A combined plot showing all bridge plots for all library pairs.
@@ -53,10 +55,10 @@ The following libraries are used for benchmarking:
 * Transcription factor libraries:
 	* [ChEA](https://www.ncbi.nlm.nih.gov/pubmed/20709693): infers transcription factor binding sites using ChIP-X experiment data manually collected from scientific publications.
 	* [ENCODE](https://www.encodeproject.org/): infers transcription factor binding sites using ChIP-seq experiments performed by the ENCODE project.
-	* [CREEDS](https://www.ncbi.nlm.nih.gov/pubmed/27667448): infers single-gene perturbation signatures using microarray data extracted and processed from the Gene Expression Omnibus by crowdsource.
+	* [CREEDS](http://amp.pharm.mssm.edu/CREEDS/): infers single-gene perturbation signatures using microarray data extracted and processed from the Gene Expression Omnibus by crowdsource.
 * Drug libraries:
 	* [DrugBank](https://www.drugbank.ca/): encyclopedia-like database of drugs and their targets based on scientific publications.
-	* [CREEDS](https://www.ncbi.nlm.nih.gov/pubmed/27667448): infers drug-gene associations using drug perturbation signatures extracted and processed from the Gene Expression Omnibus by crowdsource.
+	* [CREEDS](http://amp.pharm.mssm.edu/CREEDS/): infers drug-gene associations using drug perturbation signatures extracted and processed from the Gene Expression Omnibus by crowdsource.
 
 # How to Use:
 
