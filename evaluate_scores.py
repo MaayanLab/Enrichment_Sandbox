@@ -2,7 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from get_scores import clean, clean_wrapper
+from get_scores import clean_tf, clean
 from sklearn.metrics import auc
 from joblib import Parallel, delayed
 from collections import Counter
@@ -59,85 +59,101 @@ color_dict = {
 	'LinearSVC':'C6',
 }
 
-def shorten_libname(libname):
-	libname = libname.replace('Single_Gene_Perturbations_from_GEO_up', 'CREEDS_sep').replace('ENCODE_TF_ChIP-seq_2015', 'ENCODE')
-	libname = libname.replace('_2016','').replace('_10-05-17', '')
-	return libname
+def shorten_libnames(str_with_libnames):
+	str_with_libnames = str_with_libnames.replace(
+		'Single_Gene_Perturbations_from_GEO_up', 'CREEDS_sep').replace(
+		'ENCODE_TF_ChIP-seq_2015', 'ENCODE').replace(
+		'_2016','').replace(
+		'_10-05-17', '')
+	return str_with_libnames
 
-def plot_curve(df, col, prefix):
+def plot_curve(df, alg_info, prefix):
 	'''
 	This helper function plots a single bridge plot curve.
 	df : pandas.DataFrame
 		Columns looks like this: ['Fisher,x', 'Fisher,y', 'Foo3,x', 'Foo3,y']
-	col : tuple
-		Contains the method name and axis for the column to plot, e.g. ('Fisher','x')
+	alg_info : tuple
+		Contains the algorithm name and axis for the algorithm result to plot, e.g. ('Fisher','x')
 	prefix : str
-		Prefix of the file for the column being plotted. Contains the name of the gmt libs. 
+		Prefix of the file for the algorithm result being plotted, e.g. "input_ChEA_2016_into_CREEDS_tfs". 
 	'''
 	print('plotting')
-	prefix = shorten_libname(prefix)
-	name = col[0] 
+	prefix = shorten_libnames(prefix)
+	algorithm = alg_info.partition(',')[0] 
 	#Scale the x_vals here.
-	x_vals = [a/len(df[name + ',x']) for a in df[name + ',x']]
-	y_vals = df[name + ',y']
+	x_vals = [a/len(df[algorithm + ',x']) for a in df[algorithm + ',x']]
+	y_vals = df[algorithm + ',y']
 
+	#==========
 	#May insert control statements here to change color, linestyle, etc., as long as plt.plot() is also modified accordingly. 
+	#==========
 	linewidth=2
+	#==========
 
-	if name in color_dict:
-		plt.plot(x_vals, y_vals, label=prefix + name + '    ' + 'AUC: ' 
-			+ str(np.round(auc(x_vals, y_vals), 4)), color=color_dict[name], linewidth=linewidth)
+	if algorithm in color_dict:
+		plt.plot(x_vals, y_vals, label=prefix + algorithm + '    ' + 'AUC: ' 
+			+ str(np.round(auc(x_vals, y_vals), 4)), color=color_dict[algorithm], linewidth=linewidth)
 	else: 
-		print('plotting', name)
-		plt.plot(x_vals, y_vals, label=prefix + name + '    ' + 'AUC: ' 
+		print('plotting', algorithm)
+		plt.plot(x_vals, y_vals, label=prefix + algorithm + '    ' + 'AUC: ' 
 			+ str(np.round(auc(x_vals, y_vals), 4)), linewidth=linewidth)
 
 def pairwise_plots(pair):
-	'''Creates a bridge plot for enrichment between the specified library pair.
+	'''Creates a bridge plot for enrichment results between the specified library pair.
 	pair : dict
-		Key 'l' contains the label library name, and key 'f' contains the feature library name. 
+		Key 'i' contains the input library name, and key 's' contains the search library name. 
 	'''
 	def get_ranks(file, dn_file):
 		'''
-		Aggregates the ranks of feature lib experiments whose tfs match that which was used to rank it.
-		Normally, dn_file should == None. 
-		However, this function can also be used to take the best score between two score files.
-		In this case, file should use the up-reguated genes, and dn_file should use the down-reguated genes (from CREEDS).
+		Collects the "hit" ranks:
+			the ranks where the search library annotation matches 
+			the input library annotation which was used to get the enrichment score.
+		Normally, `dn_file == None`. 
+			However, this function can also be used to take the best rank between two CREEDS score files.
+			In this case, `file` should use the up-reguated genes, and `dn_file` should use the down-reguated genes.
 		'''
 
-		l_lib = file.partition('_to_')[0].partition('from_')[2]
-		f_lib = file.rpartition('_')[0].partition('_to_')[2]
+		i_lib = file.partition('_into_')[0].partition('input_')[2]
+		s_lib = file.rpartition('_')[0].partition('_into_')[2]
 
-		ranks_collection = []
+		hit_ranks_collection = []
 		scores = open_csv(file)
-		if dn_file is not None: dn = open_csv(dn_file)
-		#Recall that the index of scores will be the feature library experiments, and the column will be label library tfs. 
-		for column in scores: 
+		if dn_file is not None: dn_scores = open_csv(dn_file)
+		#Recall that the columns of `scores` will be input library annotations,
+		#	the index of `scores` will be the search library annotations, and 
+		#	the cell values will be the corresponding enrichment scores.
+
+		for input_annot in scores:
+			#Rank the search library annotations from best to worst score, as given by the 
+			#	enrichment algorithm when `input_annot` is the input. 
 			if dn_file is not None:
 				#Get the BEST score for each feature library experiment.
-				combined = pd.Series([min(*l) for l in zip(scores[column], dn[column])], index=scores.index) 
-				#Sort the feature library experiments by their scores.
-				ordered_tfs = combined.sort_values().index
+				best_scores = pd.Series([min(*l) for l in zip(scores[input_annot], dn_scores[input_annot])], index=scores.index) 
+				ordered_annots = best_scores.sort_values().index
 			else:
-				#Sort the feature library experiments by their scores.
-				ordered_tfs = scores[column].sort_values().index
+				ordered_annots = scores[input_annot].sort_values().index
 
-			col_clean = clean_wrapper(column, l_lib)
-			these_ranks = [ordered_tfs.get_loc(x) for x in ordered_tfs if clean_wrapper(x, f_lib) == col_clean]
-			ranks_collection += these_ranks
+			#Collect the rank values for search library annotations whose corresponding tf/drug matches
+			#	that of the input library annotation. (These are the "hit" ranks)
+			col_clean = clean(input_annot, i_lib)
+			hit_ranks = [ordered_annots.get_loc(x) for x in ordered_annots if clean(x, s_lib) == col_clean]
+			hit_ranks_collection += hit_ranks
 
 		#Return scores.shape too, which will be needed to make the graph.
 		#(scores.shape should be identical between the different methods)
-		return ranks_collection, scores.shape
+		return hit_ranks_collection, scores.shape
 
 	def get_bridge_coords(hit_ranks, ranks_range, n_rankings):
-		'''From the ranks of hits, get the coordinates of the bridge plot curve.
+		'''From the "hit" ranks, get the coordinates of the bridge plot curve.
 		hit_ranks : list
-			Aggregated ranks of the feature lib experiments whose tfs match that which was used to rank it.
+			Aggregated ranks of the search lib annotation 
+			whose corresponding tf/drug matches that of the input lib annotation.
 		ranks_range : int
-			The number of feature library experiments, i.e. the range of possible ranks.
+			The number of search library annotations, i.e. the range of possible ranks.
 		n_rankings : int
-			The number of label library tfs, i.e. the number of rankings that were created. 
+			The number of input library annotations whose corresponding tf/drug also
+			corresponds to at least one search library annotation, 
+			i.e. the number of rankings that were created. 
 		'''
 		down_const = 1/(ranks_range - 1)
 		vert_scale = len(hit_ranks)
@@ -149,55 +165,55 @@ def pairwise_plots(pair):
 			coords[x] = coords[x - 1] + hits[x] / vert_scale - down_const
 		return coords.index.values, coords.values, hits, coords
 
-	prefix = 'from_' + pair['l'] + '_to_' + pair['f']
+	prefix = 'input_' + pair['l'] + '_into_' + pair['f']
 	print(prefix)
 	rank_fname = 'rankings_' + prefix + '.csv'
 	
-	#agg_c will the contain all the different methods' bridge plot coordinates for this pair.
+	#all_coords will the contain all the different methods' bridge plot coordinates for this library pair.
+
 	#Load the saved bridge plot coordinates, if any.
-	if os.path.isfile(rank_fname): agg_c = pd.read_csv(rank_fname, sep='\t', index_col=0)
-	else: agg_c = pd.DataFrame()
+	if os.path.isfile(rank_fname): all_coords = pd.read_csv(rank_fname, sep='\t', index_col=0)
+	else: all_coords = pd.DataFrame()
 	
-	#agg_r will contain all the NEW methods' hit ranks for this pair.
-	agg_r = pd.DataFrame()
+	#new_ranks will contain all the NEW algorithms' hit ranks for this pair.
+	new_ranks = pd.DataFrame()
 	#Let's begin by looking for new score files.
 	for file in os.listdir(os.getcwd()):
 		if file.startswith(prefix):
 			#print('found', file)
-			#Get the enrichment method name.
-			m_name = str(file).partition(prefix + '_')[2].partition('.csv')[0]
-			#Skip if the results are already saved.
-			if str(m_name + ',x') in agg_c.columns.values: continue
-			#Since the method is new, get and store its hit ranks.
+			#Get the enrichment algoritm name.
+			algorithm_name = str(file).partition(prefix + '_')[2].partition('.csv')[0]
+			#If the algoritm is new, get and store its hit ranks.
+			if str(algorithm_name + ',x') in all_coords.columns.values: continue
 			if '_down' in prefix: continue
-			elif '_up' in prefix: r, r_shape = get_ranks(file, file.replace('up','down'))
-			else: r, r_shape = get_ranks(file, None)
-			print(m_name, '   ', len(r), 'hits', '   ', r_shape)
-			agg_r[m_name] = r
+			elif '_up' in prefix: hit_ranks, r_shape = get_ranks(file, file.replace('up','down'))
+			else: hit_ranks, r_shape = get_ranks(file, None)
+			print(algorithm_name, '   ', len(hit_ranks), 'hits', '   ', r_shape)
+			new_ranks[algorithm_name] = hit_ranks
+			ranks_range, n_rankings = r_shape[0], r_shape[1]
 
-	#If any new ranking files were found, we need to get and save their plot coordinates to agg_c for later.
-	if not agg_r.empty:
-		ranks_range, n_rankings = r_shape[0], r_shape[1]
-		for column in agg_r:
+	#If any new ranking files were found, we need to get and save their plot coordinates to all_coords for later.
+	if not new_ranks.empty:
+		for algorithm in new_ranks:
 			#Get and store the plot coordinates.
-			x, y, hits, coords = get_bridge_coords(agg_r[column].values, ranks_range, n_rankings)
-			agg_c[column + ',x']=x
-			agg_c[column + ',y']=y
-		agg_c.index=range(len(x))
+			x, y, hits, coords = get_bridge_coords(new_ranks[algorithm].values, ranks_range, n_rankings)
+			all_coords[algorithm + ',x']=x
+			all_coords[algorithm + ',y']=y
+		all_coords.index=range(len(x))
 	#Save the plot coordinate file.
-	agg_c.to_csv(rank_fname, sep='\t')
+	all_coords.to_csv(rank_fname, sep='\t')
 
 	#Plot the results for all enrichment methods, if any.
-	if not agg_c.empty:
+	if not all_coords.empty:
 		plt.figure(1, figsize=(10,10))
 		font = {'size': 12}
 		plt.rc('font', **font)
 		#Plot each enrichment method.
-		for column in agg_c:
-			col = (column.partition(',')[0], column.partition(',')[2])
+		for alg_info in all_coords:
+			algorithm_name, axis = (alg_info.partition(',')[0], alg_info.partition(',')[2])
 			#Filter for only certain enrichment methods here using the below if statement.
-			if col[1] == 'x':
-				plot_curve(agg_c, col, '')
+			if axis == 'x':
+				plot_curve(all_coords, alg_info, '')
 		plt.title(pair['l'].replace('_up', '_up/dn') + ' to ' + pair['f'].replace('_up', '_up/dn') + ' Bridge Plot')
 		plt.xlabel('Rank')
 		#Uncomment the line below to view only the first few ranks.
@@ -216,14 +232,18 @@ def combined_plot(lib_df_pairs):
 	font = {'size': 12}
 	plt.rc('font', **font)
 	for pair in lib_df_pairs:
-		prefix = 'from_' + pair['l'] + '_to_' + pair['f']
+		prefix = 'input_' + pair['l'] + '_into_' + pair['f']
 		rank_fname = 'rankings_' + prefix + '.csv'
 		if os.path.isfile(rank_fname): 
-			agg_c = open_csv(rank_fname)
-			for column in agg_c:
-				col = (column.partition(',')[0], column.partition(',')[2])
-				#Filter for only certain enrichment methods here using the if statement.
-				if col[1] == 'x' and (col[0] in ['RandomForest']): plot_curve(agg_c, col, prefix + ' ')
+			all_coords = open_csv(rank_fname)
+			for alg_info in all_coords:
+				algorithm_name, axis = alg_info.partition(',')[0], alg_info.partition(',')[2]
+				#===========================================================================================
+				#Filter for only certain enrichment methods here using an if statement.
+				#===========================================================================================
+				if axis == 'x' and (algorithm_name in ['RandomForest']): plot_curve(all_coords, alg_info, prefix + ' ')
+				#===========================================================================================
+
 	plt.title('Combined Bridge Plot')
 	plt.xlabel('Rank')
 	#Uncomment the line below to view only the first few ranks.
@@ -244,9 +264,9 @@ def subplots(lib_pairs, all_libs, top_10):
 	font = {'size':20}
 	plt.rc('font', **font)
 
-	#Collect all the methods found so that we can create a legend at the end.
-	#IMPORTANT: this only works if each lib_pair has the EXACT same plots, e.g. Fisher and Control.
-	methods = pd.Series()
+	#Collect all the algorithms found so that we can create a legend at the end.
+	#IMPORTANT: the legend only works if each lib_pair has the EXACT same algorithms.
+	algorithms = pd.Series()
 
 	#Create the grid by iterating over all_libs.
 	for i in range(len(all_libs)):
@@ -256,23 +276,25 @@ def subplots(lib_pairs, all_libs, top_10):
 			subplot = axarr[i,j]
 			#Check if you want to plot this pair (e.g. you dont want to if rlib == clib).
 			if {'l':rlib, 'f':clib} in lib_pairs:
-				prefix = 'from_' + rlib + '_to_' + clib
+				prefix = 'input_' + rlib + '_into_' + clib
 				rank_fname = 'rankings_' + prefix + '.csv'
 				if os.path.isfile(rank_fname): 
-					agg_c = open_csv(rank_fname)
-					for column in agg_c:
-						col = (column.partition(',')[0], column.partition(',')[2])
-						#Use the 'if' statement below to filter out which results you want to view.
-						if col[1] == 'x' and '_n_' not in col[0] and '_w_' not in col[0]:
-							name = col[0] 
-							x_vals = [a/len(agg_c[name + ',x']) for a in agg_c[name + ',x']]
-							y_vals = agg_c[name + ',y']
+					all_coords = open_csv(rank_fname)
+					for alg_info in all_coords:
+						algorithm_name, axis = alg_info.partition(',')[0], alg_info.partition(',')[2]
+						#===========================================================================================
+						#Filter for only certain enrichment algorithms here using an if statement.
+						#===========================================================================================
+						if axis == 'x': 
+						#===========================================================================================
+							x_vals = [a/len(all_coords[algorithm_name + ',x']) for a in all_coords[algorithm_name + ',x']]
+							y_vals = all_coords[algorithm_name + ',y']
 
 							linewidth = 2.5
-							if name in color_dict: 
-								methods[name] = subplot.plot(x_vals, y_vals, label=name + ' ' + str(np.round(auc(x_vals, y_vals), 4)), color=color_dict[name], linewidth=linewidth)
+							if algorithm_name in color_dict: 
+								algorithms[algorithm_name] = subplot.plot(x_vals, y_vals, label=algorithm_name + ' ' + str(np.round(auc(x_vals, y_vals), 4)), color=color_dict[algorithm_name], linewidth=linewidth)
 							else:
-								methods[name] = subplot.plot(x_vals, y_vals, label=name + ' ' + str(np.round(auc(x_vals, y_vals), 4)), linewidth=linewidth)
+								algorithms[algorithm_name] = subplot.plot(x_vals, y_vals, label=algorithm_name + ' ' + str(np.round(auc(x_vals, y_vals), 4)), linewidth=linewidth)
 							#If you want to view legends for each subplot (e.g. to see the AUC), you will need to un-comment this line.
 							subplot.legend(fontsize=12, loc='upper right')
 			#Uncomment below to scale all subplots equally (to compare relative sizes between subplots).
@@ -289,16 +311,16 @@ def subplots(lib_pairs, all_libs, top_10):
 
 	#Label the rows and columns of the figure.
 	print(all_libs)
-	lib_titles = [shorten_libname(x) for x in all_libs]
+	lib_titles = [shorten_libnames(x) for x in all_libs]
 	for ax, col in zip(axarr[0], lib_titles): ax.set_title(col)
 	for ax, row in zip(axarr[:,0], lib_titles): ax.set_ylabel(row, size='large')
 	#Leave some space between the subplots.
 	f.subplots_adjust(hspace=.15, wspace=.1)
 	#Create a legend in the last cell (should be empty, because it is a diagonal).
-	plt.legend([x for sublist in methods.values for x in sublist], methods.index, loc='upper left', ncol=1)
+	plt.legend([x for sublist in algorithms.values for x in sublist], algorithms.index, loc='upper left', ncol=1)
 	#Title the plot.
-	if top_10: plt.suptitle('Bridge plots from [row] to [column], top 10 percentile of ranks', fontsize=28)
-	else: plt.suptitle('Bridge plots from [row] to [column]', fontsize=32)
+	if top_10: plt.suptitle('Bridge plots inputting [row] into [column], top 10 percentile of ranks', fontsize=28)
+	else: plt.suptitle('Bridge plots inputting [row] into [column]', fontsize=32)
 	plt.show()
 	return 
 
@@ -347,7 +369,7 @@ def hexbin_method_comparison(libs, m1, m2):
 			clib = libs[j]
 			subplot = axarr[i,j]
 			if {'l':rlib, 'f':clib} in lib_pairs:
-				prefix = 'from_' + rlib + '_to_' + clib
+				prefix = 'input_' + rlib + '_into_' + clib
 				fname1 = prefix + '_' + m1 + '.csv'
 				fname2 = prefix + '_' + m2 + '.csv'
 				if fname1 in os.listdir(os.getcwd()) and fname2 in os.listdir(os.getcwd()):
@@ -361,7 +383,7 @@ def hexbin_method_comparison(libs, m1, m2):
 			#Hide ticks on the y axis.
 			subplot.axes.get_yaxis().set_ticks([])
 
-	lib_titles = [shorten_libname(x) for x in all_libs]
+	lib_titles = [shorten_libnames(x) for x in all_libs]
 	for ax, col in zip(axarr[0], lib_titles): ax.set_title(col)
 	for ax, row in zip(axarr[:,0], lib_titles): ax.set_ylabel(row, size='large')
 	#Leave some space between the subplots.
@@ -372,7 +394,7 @@ def hexbin_method_comparison(libs, m1, m2):
 	return 
 
 if __name__ == '__main__':
-	tf_libs = ['ENCODE_TF_ChIP-seq_2015_abridged', 'ChEA_2016_abridged', 'CREEDS_abridged']
+	tf_libs = ['ENCODE_TF_ChIP-seq_2015', 'ChEA_2016', 'CREEDS']
 	drug_libs = ['1_DrugBank_EdgeList_10-05-17', 
 		'2_TargetCentral_EdgeList_10-05-17',
 		'3_EdgeLists_Union_10-05-17', 
@@ -381,25 +403,29 @@ if __name__ == '__main__':
 		'CREEDS_Drugs',
 		'DrugMatrix']
 
-	#========================================================
-	#Choose which libraries with which to perform enrichment.
-	#========================================================
-	libs = drug_libs
-	#========================================================
+	#=============================================================
+	#Choose which libraries with which to view enrichment results.
+	#=============================================================
+	libs = tf_libs
+	#=============================================================
 
 	lib_pairs = [{'l':a, 'f':b} for a in libs for b in libs if a != b]
 
-	#Handle the separate results for CREEDS, if applicable. 
-	CREEDS_sep_pairs = [{'l':a, 'f':'Single_Gene_Perturbations_from_GEO_up'} for a in libs if a != 'CREEDS'] + [
-	{'l':'Single_Gene_Perturbations_from_GEO_up', 'f':b} for b in libs if b != 'CREEDS']
-	all_pairs = lib_pairs + CREEDS_sep_pairs
-	all_libs = ['Single_Gene_Perturbations_from_GEO_up'] + libs
+	##Handle the separate results for CREEDS, if applicable. 
+	#CREEDS_sep_pairs = [{'l':a, 'f':'Single_Gene_Perturbations_from_GEO_up'} for a in libs if a != 'CREEDS'] + [
+	#{'l':'Single_Gene_Perturbations_from_GEO_up', 'f':b} for b in libs if b != 'CREEDS']
+	#all_pairs = lib_pairs + CREEDS_sep_pairs
+	#all_libs = ['Single_Gene_Perturbations_from_GEO_up'] + libs
 
 	os.chdir('results')
 
-	#Parallel(n_jobs=1, verbose=0)(delayed(pairwise_plots)(pair) for pair in lib_pairs)
+	#=============================================================
+	#Choose how to visualize the results.
+	#=============================================================
+	Parallel(n_jobs=1, verbose=0)(delayed(pairwise_plots)(pair) for pair in lib_pairs)
 	#combined_plot(all_pairs)
 	subplots(lib_pairs, libs, top_10=False)
 	subplots(lib_pairs, libs, top_10=True)
 	#hexbin_method_comparison(libs, 'Pair_Gini_ltf100_25', 'Pair_Gini_ltf100_w_25')
+	#=============================================================
 

@@ -3,7 +3,7 @@ import pandas as pd
 
 #========================================================================================================
 '''
-The purpose of this script is to adjust the score or ranking files for a certain method.
+The purpose of this script is to adjust the score or ranking files for a certain algorithm.
 '''
 #========================================================================================================
 
@@ -15,22 +15,22 @@ def rename(str_to_change, new_str):
 	for x in os.listdir(os.getcwd()):
 		if (str_to_change) in x: os.rename(x, x.replace(str_to_change, new_str))
 
-def invert(method):
+def invert(algorithm):
 	'''
-	Takes the negation of all scores in score files for the given method.
-	This may be useful if you accidentally write a method where highest scores are the best. 
+	Takes the negation of all scores in score files for the given algorithm.
+	This may be useful if you accidentally write a algorithm where highest scores are the best. 
 	(evaluate_scores.py will always reward low scores.)
 	'''
 	for x in os.listdir(os.getcwd()):
-		if ('_' + method + '.csv') in x:
+		if ('_' + algorithm + '.csv') in x:
 			f = pd.read_csv(x, sep='\t', index_col=0)
 			for col in f:
 				print(col)
 				f[col] = [-i for i in f[col]]
 			f.to_csv(x, sep='\t')
 
-def remove_old_methods_from_ranking_files():
-	'''For all ranking files, removes cols corresponding to methods which do not have score files.'''
+def remove_old_algorithms_from_ranking_files():
+	'''For all ranking files, removes cols corresponding to algorithms which do not have score files.'''
 	for x in os.listdir(os.getcwd()):
 		if 'rankings_from_' in x:
 			f = pd.read_csv(x, sep='\t', index_col=0)
@@ -39,13 +39,13 @@ def remove_old_methods_from_ranking_files():
 					f.drop(col, axis=1, inplace=True)
 			f.to_csv(x, sep='\t')
 
-def remove_this_method_from_ranking_files(method):
-	'''For all ranking files, removes cols corresponding to the specified method.'''
+def remove_this_algorithm_from_ranking_files(algorithm):
+	'''For all ranking files, removes cols corresponding to the specified algorithm.'''
 	for x in os.listdir(os.getcwd()):
 		if 'rankings_from_' in x:
 			f = pd.read_csv(x, sep='\t', index_col=0)
 			for col in f:
-				if col.partition(',')[0] == method:
+				if col.partition(',')[0] == algorithm:
 					f.drop(col, axis=1, inplace=True)
 			f.to_csv(x, sep='\t')
 
@@ -62,12 +62,17 @@ def remove_this_library_from_results(lib, rm_folder='to_trash'):
 			os.rename(x, rm_folder + '\\' + x)
 
 	
-os.chdir('results')
+#os.chdir('results')
 
 # Sample Usage:
 	# rename('RandomForest.csv','BadRForest.csv')
 	# rename('RandomForest_rep.csv','RandomForest.csv')
 	# #invert('InfoGainEntropy')
-	# #remove_this_method_from_ranking_files('ExtraTrees')
+	# #remove_this_algorithm_from_ranking_files('ExtraTrees')
 	# #rename('Classifier','')
-	# remove_old_methods_from_ranking_files()
+	# remove_old_algorithms_from_ranking_files()
+
+os.chdir('libs')
+for f in os.listdir(os.getcwd()):
+	if '_transformed' in f:
+		os.rename(f, f.replace('_transformed','_gvm'))
