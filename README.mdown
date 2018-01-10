@@ -1,3 +1,5 @@
+NOTE: README must be updated to reflect new variable naming scheme!
+
 # Project Summary
 
 Enrichment analysis algorithms identify known, annotated gene sets which share many genes in common with an input gene set. The input gene set might be a list of differentially-expressed genes from a biological experiment (e.g. treating both a cancerous cell line and a healthy cell line with a drug, and identifying genes with the greatest difference in expression levels using RNA-seq), while the annotations of the known gene sets might be transcription factor binding sites, drug targets, or biological processes. By associating the annotations of the most similar known gene sets to the input gene set, a scientist can use enrichment analysis to learn about the biological interconnectedness of the input gene set. 
