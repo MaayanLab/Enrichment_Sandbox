@@ -61,7 +61,7 @@ The bridge plots can be zoomed-in to view only the top ranks, and filtered to vi
 
 <div style="display:inline">
 <img src="README images/drugs.png" title="Bridge plot"/>
-<img src="README images/sklearn.png" title="Bridge plot, zoomed in"/>
+<img src="README images/bridgeplot.png" title="Bridge plot, zoomed in"/>
 </div>
 <div style="display:inline">
 <img src="README images/grid.png" title="Bridge plot array"/>
