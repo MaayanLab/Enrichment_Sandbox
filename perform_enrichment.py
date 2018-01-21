@@ -5,14 +5,13 @@ import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 import enrichment_functions as m
-from setup import convert_gmt
+from setup import convert_gmt, open_csv
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, \
 	RandomTreesEmbedding, AdaBoostClassifier, ExtraTreesClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.svm import LinearSVC
 from xgboost import XGBClassifier
 from random import uniform as rand
-from setup import open_csv
 import scipy.stats as stats
 #from get_classifiers import get_classifiers #REMOVED. the script was put in the old or unused scripts folder.
 import h5py
@@ -153,11 +152,11 @@ if __name__ == '__main__':
 		'DrugMatrix_Union',
 		)
 
-	#========================================================
-	#Choose which libraries with which to perform enrichment.
-	#========================================================
+	#======================================================
+	#Choose the libraries with which to perform enrichment.
+	#======================================================
 	libs = tf_libs
-	#========================================================
+	#======================================================
 
 	#Get dataframes of each gmt library in libs
 	os.chdir('libs')

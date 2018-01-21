@@ -11,16 +11,24 @@ def open_csv(fname):
 	return pd.read_csv(fname, index_col=0, sep='\t', low_memory=False, encoding='Latin-1')
 
 def open_gvm(fname):
-	#Open the file.
-	gvm = pd.read_csv(fname, keep_default_na = False, na_values=('',), sep='\t', low_memory=False, encoding='Latin-1', index_col=0)
-	##Workaroud from bug which raised error if keep_default_na=False and index_col=0 are both used.
-	#gvm = pd.read_csv(fname, keep_default_na = False, na_values=('',), sep='\t', low_memory=False, encoding='Latin-1')
-	#lib_name = fname.partition('_gvm.csv')[0]
-	#gvm.set_index(gvm[lib_name], inplace=True)
-	#gvm.drop([lib_name], axis=1, inplace=True)
+	print('opening', fname)
+	#Read in chunks if the file is too big.
+	if 'interactions' in fname:
+		file_chunks = pd.read_csv(fname, keep_default_na = False, sep='\t', 
+			low_memory=False, encoding='Latin-1', index_col=0, chunksize=1000)
+		gvm = pd.concat(file_chunks)
+		gvm = gvm.replace(to_replace='',value=False).astype(bool)
+	else:
+		gvm = pd.read_csv(fname, keep_default_na = False, na_values=('',), sep='\t', 
+			low_memory=False, encoding='Latin-1', index_col=0)
+		##Workaroud from bug which raised error if keep_default_na=False and index_col=0 are both used.
+		#gvm = pd.read_csv(fname, keep_default_na = False, na_values=('',), sep='\t', low_memory=False, encoding='Latin-1')
+		#lib_name = fname.partition('_gvm.csv')[0]
+		#gvm.set_index(gvm[lib_name], inplace=True)
+		#gvm.drop([lib_name], axis=1, inplace=True)
 
-	#Convert blank cells to False, and ensure bool type. 
-	gvm = gvm.fillna(False).astype(bool)
+		#Convert blank cells to False, and ensure bool type. 
+		gvm = gvm.fillna(False).astype(bool)
 	return gvm
 
 def file_exists(fname):
