@@ -70,10 +70,6 @@ The bridge plots can be zoomed-in to view only the top ranks, and filtered to vi
 
 ### Construction and interpretation of the bridge plots:
 
-<div style="display:inline">
-<img src="README images/auc.png" width="500"/>
-</div>
-
 Bridge plots are used to view the rank positions of the matching annotations from the search library, aggregated over all input gene sets from the input library. 
 
 * The ranks of the "matching" experiments are collected.
@@ -87,6 +83,12 @@ Bridge plots are used to view the rank positions of the matching annotations fro
 You can sort of interpret the bridge plot as a cdf of the ranks of the matches, turned 45 degrees counter-clockwise. 
 
 A good ranking method will result in a bridge plot with a large area underneath it (AUC), and with a tall supremum occuring at a low x-value. (In the best possible outcome, where all ranks occur at x=0, the curve will be an isosceles right triangle with AUC=.5 and supremum of 1 at x=0.)
+
+<div style="display:inline">
+<img src="README images/auc.png" width="500"/>
+</div>
+
+In the above example, the Fisher's exact test clearly outperforms the RandomForest algorithm, as seen by its taller and earlier supremum. The curve for the Control resembles a Brownian random walk, as expected.
 
 # How to Use:
 
