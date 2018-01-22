@@ -59,9 +59,9 @@ A bridge plot summarizes the results of enrichment analysis between a single pai
 * The curve begins at (0,0).
 * At every integer x-value after zero, the y-value decreases at a constant rate.
 * At every integer x-value, the y-value also increases proportionally to the number of matches with ranks occuring at that x-value.
-	* (Recall that for each annotation in the input library, the algorithm has created a ranking of all search library annotations. From this collection of rankings, the rank positions of the "matches" are aggregated, and this is what is used to increase they y-value.
+	* (Recall that for each annotation in the input library, the algorithm has created a ranking of all search library annotations. From this collection of rankings, the rank positions of the "matches" are aggregated, and this is what is used to increase the y-value.
 * The decrease and increase constants are scaled such that they cancel out, and the curve ends at (n,0), where n is the number of search library annotations.
-* The plot is then normalized. The y-axis is scaled such that the product of the increase constant and the number of matches is 1. (Thus, the highest possible y-value is 1, and this occurs when all match rank positions are 0.) The x-axis is scaled such that all the ranks are between one and zero.
+* The plot is then normalized. The y-axis is scaled such that the product of the increase constant and the number of matches is 1. (Thus, the highest possible y-value is 1, and this occurs when all match rank positions are at x=0.) The x-axis is scaled such that ranks are evenly-spaced between zero and one.
 * The result is a curve whose null-distribution is similar, but not identical, to a Brownian bridge. 
 
 You can sort of interpret the bridge plot as a cdf of the match rank positions, turned 45 degrees counter-clockwise. 
