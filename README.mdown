@@ -2,7 +2,9 @@
 
 Enrichment analysis algorithms identify known, annotated gene sets which are most similar to an input gene set. The input gene set might be a list of differentially-expressed genes from a biological experiment (e.g. treating a cancerous cell line with a drug, and identifying genes with the greatest change in expression levels using RNA-seq), while the annotations of the known gene sets might correspond to transcription factor binding sites identified by ChIP-seq, drug targets determined by perturbation signatures, or biological processes mined from scientific publications. By associating the annotations of the most similar known gene sets to the input gene set, a scientist can use enrichment analysis to learn about the biology of the input gene set. For the cancerous cell line example, this means answering questions like "What transcription factors might this drug have activated?", "What drugs have similar effects?", or "What regulatory pathways are playing a role here?".
 
-The primary purpose of this project is to evaluate new algorithms for enrichment analysis. It only considers algorithms whose input is a gene set, and not original gene expression data. It evaluates these algorithms by measuring their abilities to, when given an annotated gene set from one library, return the gene sets in a another library whose annotations match that of the input.
+The primary purpose of this project is to evaluate new algorithms for enrichment analysis. It only considers algorithms whose input is a gene set, and not original gene expression data, and whose output is a ranking of the known annotations, from most to least enriched. It evaluates these algorithms by measuring their abilities to, when given an annotated gene set from one library, rank highly the "matching" annotations in a different library, e.g. those which refer to the same drug or transcription factor.
+
+Currently, the most-used algorithm for this form of enrichment analysis is the Fisher's exact test. While simple and effective, it considers each gene independently, and each annotation separately. Since we know biological phenomena interact with one another, there is theoretically much room for improvement.
 
 [Here is a link to a video explanation of this project from August 2017.](https://www.youtube.com/watch?v=IyDvGPtHP7U) Note that some naming conventions have since changed: for example, I've renamed the feature and label libraries as the input and search libraries, respectively. 
 
@@ -10,13 +12,13 @@ The primary purpose of this project is to evaluate new algorithms for enrichment
 
 These enrichment analysis algorithms have been implemented:
 
-* A control, which returns a random ranking of the known gene sets
-* Fisher's exact test
-* Binomial proportions test
-* Z score and Combined score from the Enrichr API
-* Gini Impurity and Entropy
-	* A pairwise variant of the Gini Impurity and Entropy, which splits on two terms at a time
-* Machine learning methods, which build classifiers that predict whether genes in the search library also belong to the input gene set, and then use feature importances to rank the search library annotations:
+* A control: returns a random ranking of the known gene sets.
+* Fisher's exact test: for each annotation, computes a p-value for overrepresentation. Then, ranks annotations by ascending p-value.
+* Binomial proportions test: variant of the Fisher's exact test.
+* Z score and Combined score from the [Enrichr](http://amp.pharm.mssm.edu/Enrichr/help#background&q=4) API
+* Gini Impurity and Entropy: for each annotation, use its gene set to split the set of all genes in the search library, and with the objective of separating out the genes in the input gene set, compute the gini impurity (a measure of misclassification error) or entropy (a measure of information gain) of the split. Then, rank annotations by ascending gini impurity or entropy.
+	* A pairwise variant of the Gini Impurity and Entropy: splits on each pair of annotations. Then, ranks annotations by a score which is a function of the gini impurity or entropy of the splits in which it occured.
+* Machine learning methods: build classifiers that predict whether genes in the search library also belong to the input gene set, and then use feature importances to rank the search library annotations.
 	* RandomForest, ExtraTrees, RandomTreesEmbedding, GradientBoosting and AdaBoost from sklearn.ensemble
 	* LinearSVC from sklearn.svm
 	* XGBoost from the DMLC
@@ -27,7 +29,7 @@ These enrichment analysis algorithms have been implemented:
 
 ## Libraries
 
-This project supports both transcription factor libraries and drug libraries.  
+Algorithms are evaluated by performing enrichment between pairs of libraries with similar annotations. This project supports both transcription factor libraries and drug libraries.  
 
 * Transcription factor libraries:
 	* [ChEA](https://www.ncbi.nlm.nih.gov/pubmed/20709693): infers transcription factor binding sites using ChIP-X experiment data manually collected from scientific publications.
@@ -43,18 +45,39 @@ This project supports both transcription factor libraries and drug libraries.
 
 ## Description of benchmarking process
 
-The benchmarking process is as follows: Two libraries whose gene sets have similar annotations are chosen. (Either both have transcription factor annotations, or both have drug annotations.) One is designated as the `input library`, and the other is designated as the `search library`. Annotations in the `input library` whose corresponding transcription factor or drug also corresponds to at least one annotation in the `search library` are identified. Then, one at a time, the gene sets of these common annotations from the `input library` are used to perform enrichment into all of the `search library`. For each input gene set, the enrichment algorithm will return a ranking of all annotations in the `search library`, from most enriched to least enriched. Since the input and search libraries should agree with one another, we expect that the `search library` annotations corresponding to the same transcription factor (or drug) as the input annotation will appear toward the top of the rankings. Therefore, a good algorithm will consistently rank these matching annotations highly, while a bad algorithm will not. "Bridge plots," explained below, are used to qualitatively evaulate this.
+The benchmarking process is as follows: Two libraries whose gene sets have similar annotations are chosen. (Either both have transcription factor annotations, or both have drug annotations.) One is designated as the `input library`, and the other is designated as the `search library`. Annotations in the `input library` whose corresponding transcription factor or drug also corresponds to at least one annotation in the `search library` are identified. Then, one at a time, the gene sets of these common annotations from the `input library` are used to perform enrichment into all of the `search library`. For each input gene set, the enrichment algorithm will return a ranking of all annotations in the `search library`, from most enriched to least enriched. Since the input and search libraries should agree with one another, the `search library` annotations corresponding to the same transcription factor (or drug) as the input annotation should appear toward the top of the rankings. Therefore, a good algorithm will consistently rank these matching annotations highly, while a bad algorithm will not. "Bridge plots," explained below, are used to qualitatively evaulate this.
 
-Because the libraries are derived differently (e.g. transcription factor-to-gene libraries might be derived from experimental ChIP-seq data, or from ChIP-seq data mined from publications, or from microarray data), a secondary purpose of this project is to measure the agreement between the libraries. In theory, all libraries of the same type should agree with each other to some degree, and libraries which used the same or similar techniques should have even more agreement among one another.
+Because the libraries are derived differently (e.g. transcription factor-to-gene libraries might be derived from experimental ChIP-seq data, or from ChIP-seq data mined from publications, or from microarray data), a secondary purpose of this project is to measure the agreement between the libraries. If two libraries agree with one another, then their gene sets for matching annotations should be unusually similar, so enrichment algorithms should be able to consistently assign high ranks to matches. Theoretically, all libraries of the same type should have some agreement, and libraries which use the same or similar techniques to obtain the gene sets should have even more agreement.
 
 ## Visualizing the results
 
-These visualizations are available: 
+<div style="display:inline">
+<img src="README images/auc.png" width="500"/>
+</div>
+
+A bridge plot summarizes the results of enrichment analysis between a single pair of libraries. Here is how it is made:
+* The curve begins at (0,0).
+* At every integer x-value after zero, the y-value decreases at a constant rate.
+* At every integer x-value, the y-value also increases proportionally to the number of matches with ranks occuring at that x-value.
+	* (Recall that for each annotation in the input library, the algorithm has created a ranking of all search library annotations. From this collection of rankings, the rank positions of the "matches" are aggregated, and this is what is used to increase they y-value.
+* The decrease and increase constants are scaled such that they cancel out, and the curve ends at (n,0), where n is the number of search library annotations.
+* The plot is then normalized. The y-axis is scaled such that the product of the increase constant and the number of matches is 1. (Thus, the highest possible y-value is 1, and this occurs when all match rank positions are 0.) The x-axis is scaled such that all the ranks are between one and zero.
+* The result is a curve whose null-distribution is similar, but not identical, to a Brownian bridge. 
+
+You can sort of interpret the bridge plot as a cdf of the match rank positions, turned 45 degrees counter-clockwise. 
+
+A good ranking method will result in a bridge plot with a large area underneath it (AUC), and with a tall supremum occuring at a low x-value. (In the best possible outcome, where all ranks occur at x=0, the curve will be an isosceles right triangle with AUC=.5 and supremum of 1 at x=0.)
+
+In the above example, the Fisher's exact test clearly outperforms the RandomForest algorithm, as seen by its taller and earlier supremum. The curve for the Control resembles a Brownian random walk, as expected.
+
+### Plots
+
+These plots are available: 
 
 * All bridge plots for a single library pair, comparing the rankings of different algorithms.
 * A combined plot showing all bridge plots for all library pairs.
 * An array of bridge plots, with each library pair in its own subplot.
-* An array of hexbin plots (a kind of bivariate histogram), with each library pair in its own subplot.
+* An array of hexbin plots, with each library pair in its own subplot.
 	* These are useful for comparing how two different algorithms rank the same terms.
 
 The bridge plots can be zoomed-in to view only the top ranks, and filtered to view only certain algorithms.
@@ -67,28 +90,6 @@ The bridge plots can be zoomed-in to view only the top ranks, and filtered to vi
 <img src="README images/grid.png" title="Bridge plot array"/>
 <img src="README images/hexbin.png" title="Hexbin array"/>
 </div>
-
-### Construction and interpretation of the bridge plots:
-
-Bridge plots are used to view the rank positions of the matching annotations from the search library, aggregated over all input gene sets from the input library. 
-
-* The ranks of the "matching" experiments are collected.
-* At every x-value after zero, the y-value decreases at a constant rate.
-* At every x-value, the y value also increases proportionally to the number of "matching" ranks which occured at that x-value.
-* The decrease and increase constants are scaled such that they cancel out, and the curve ends at y=0.
-* The y-axis is scaled such that the highest y-value possible (if all ranks occured at x=0) is 1.
-* The x-axis is scaled such that all the ranks are between one and zero.
-* The result is a curve whose null-distribution is similar, but not identical, to a Brownian bridge. 
-
-You can sort of interpret the bridge plot as a cdf of the ranks of the matches, turned 45 degrees counter-clockwise. 
-
-A good ranking method will result in a bridge plot with a large area underneath it (AUC), and with a tall supremum occuring at a low x-value. (In the best possible outcome, where all ranks occur at x=0, the curve will be an isosceles right triangle with AUC=.5 and supremum of 1 at x=0.)
-
-<div style="display:inline">
-<img src="README images/auc.png" width="500"/>
-</div>
-
-In the above example, the Fisher's exact test clearly outperforms the RandomForest algorithm, as seen by its taller and earlier supremum. The curve for the Control resembles a Brownian random walk, as expected.
 
 # How to Use:
 
@@ -106,6 +107,8 @@ Scripts I have used previously are in the `old scripts` folder. They worked with
 * `get_classifiers.py` was a helper function needed if a `ML_Fisher_features` method is used. 
 * `get_fisher_adjusted_vars.py` was used to get and view the correlation data for the adjusted Fisher's test.
 
+*Note: drug library compatibility is currently under construction.*
+
 # Code details:
 
 ## Description of pipeline
@@ -113,7 +116,7 @@ Scripts I have used previously are in the `old scripts` folder. They worked with
 1. **`setup.py`**
 * The gmt files are transformed into gene vector matrices (gvms), with column labels being annotations and row labels being genes. Each column is a boolean vector corresponding to a gene set.
 
-2. **`get_scores.py`**
+2. **`perform_enrichment.py`**
 * For each (input, search) pair of libraries:
 	* Get a list of annotations in the index library whose corresponding transcription factor is also found in at least one search library annotations. These will be referred to as the common index library annotations. 
 	* For each enrichment algorithm:
@@ -123,7 +126,7 @@ Scripts I have used previously are in the `old scripts` folder. They worked with
 			* Save this output as a column in a dataframe. 
 		* The final dataframe is stored as a `.csv` file. (Columns: common index library annotations. Indices: search library annotations. Cell values: scores given by the enrichment method. Title of file: "input_", input library, "_into_", search library, ".csv".)
 
-3. **`evaluate_scores.py`**
+3. **`evaluate_results.py`**
 * For each `(input, search)` pair of gmt libraries:
 	* The results files created by `get_scores.py` are loaded.
 	* For each result file (i.e., for each algorithm):
@@ -147,7 +150,7 @@ Scripts I have used previously are in the `old scripts` folder. They worked with
 * `funct` : function - specifically, an enrichment analysis function in `enrichment_functions.py`
 * `params` : parameters for a function
 * `algorithm` : a specific function & paramaters combination which is being used to perform enrichment
-* `match` or `hit` : annotations which correspond to the same transcription factor or drug 
+* `match` : two annotations match when they refer to the same transcription factor or drug 
 
 # Future Directions
 

@@ -105,7 +105,7 @@ def pairwise_plots(pair):
 	'''
 	def get_ranks(file, dn_file):
 		'''
-		Collects the "hit" ranks:
+		Collects the "match" ranks:
 			the ranks where the search library annotation matches 
 			the input library annotation which was used to get the enrichment score.
 		Normally, `dn_file == None`. 
@@ -116,7 +116,7 @@ def pairwise_plots(pair):
 		i_lib = file.partition('_into_')[0].partition('input_')[2]
 		s_lib = file.rpartition('_')[0].partition('_into_')[2]
 
-		hit_ranks_collection = []
+		match_ranks_collection = []
 		scores = open_csv(file)
 		if dn_file is not None: dn_scores = open_csv(dn_file)
 		#Recall that the columns of `scores` will be input library annotations,
@@ -134,18 +134,18 @@ def pairwise_plots(pair):
 				ordered_annots = scores[input_annot].sort_values().index
 
 			#Collect the rank values for search library annotations whose corresponding tf/drug matches
-			#	that of the input library annotation. (These are the "hit" ranks)
+			#	that of the input library annotation. (These are the "match" ranks)
 			col_clean = clean(input_annot, i_lib)
-			hit_ranks = [ordered_annots.get_loc(x) for x in ordered_annots if clean(x, s_lib) == col_clean]
-			hit_ranks_collection += hit_ranks
+			match_ranks = [ordered_annots.get_loc(x) for x in ordered_annots if clean(x, s_lib) == col_clean]
+			match_ranks_collection += match_ranks
 
 		#Return scores.shape too, which will be needed to make the graph.
 		#(scores.shape should be identical between the different methods)
-		return hit_ranks_collection, scores.shape
+		return match_ranks_collection, scores.shape
 
-	def get_bridge_coords(hit_ranks, ranks_range, n_rankings):
-		'''From the "hit" ranks, get the coordinates of the bridge plot curve.
-		hit_ranks : list
+	def get_bridge_coords(match_ranks, ranks_range, n_rankings):
+		'''From the "match" ranks, get the coordinates of the bridge plot curve.
+		match_ranks : list
 			Aggregated ranks of the search lib annotation 
 			whose corresponding tf/drug matches that of the input lib annotation.
 		ranks_range : int
@@ -156,14 +156,14 @@ def pairwise_plots(pair):
 			i.e. the number of rankings that were created. 
 		'''
 		down_const = 1/(ranks_range - 1)
-		vert_scale = len(hit_ranks)
+		vert_scale = len(match_ranks)
 
-		hits = Counter(hit_ranks)
+		matches = Counter(match_ranks)
 		coords = pd.Series(0.0, index=range(ranks_range))
-		coords[0] = hits[0] / vert_scale
+		coords[0] = matches[0] / vert_scale
 		for x in range(1, ranks_range):
-			coords[x] = coords[x - 1] + hits[x] / vert_scale - down_const
-		return coords.index.values, coords.values, hits, coords
+			coords[x] = coords[x - 1] + matches[x] / vert_scale - down_const
+		return coords.index.values, coords.values, matches, coords
 
 	prefix = 'input_' + pair['l'] + '_into_' + pair['f']
 	print(prefix)
@@ -175,7 +175,7 @@ def pairwise_plots(pair):
 	if os.path.isfile(rank_fname): all_coords = pd.read_csv(rank_fname, sep='\t', index_col=0)
 	else: all_coords = pd.DataFrame()
 	
-	#new_ranks will contain all the NEW algorithms' hit ranks for this pair.
+	#new_ranks will contain all the NEW algorithms' match ranks for this pair.
 	new_ranks = pd.DataFrame()
 	#Let's begin by looking for new score files.
 	for file in os.listdir(os.getcwd()):
@@ -183,20 +183,20 @@ def pairwise_plots(pair):
 			#print('found', file)
 			#Get the enrichment algoritm name.
 			algorithm_name = str(file).partition(prefix + '_')[2].partition('.csv')[0]
-			#If the algoritm is new, get and store its hit ranks.
+			#If the algoritm is new, get and store its match ranks.
 			if str(algorithm_name + ',x') in all_coords.columns.values: continue
 			if '_down' in prefix: continue
-			elif '_up' in prefix: hit_ranks, r_shape = get_ranks(file, file.replace('up','down'))
-			else: hit_ranks, r_shape = get_ranks(file, None)
-			print(algorithm_name, '   ', len(hit_ranks), 'hits', '   ', r_shape)
-			new_ranks[algorithm_name] = hit_ranks
+			elif '_up' in prefix: match_ranks, r_shape = get_ranks(file, file.replace('up','down'))
+			else: match_ranks, r_shape = get_ranks(file, None)
+			print(algorithm_name, '   ', len(match_ranks), 'matches', '   ', r_shape)
+			new_ranks[algorithm_name] = match_ranks
 			ranks_range, n_rankings = r_shape[0], r_shape[1]
 
 	#If any new ranking files were found, we need to get and save their plot coordinates to all_coords for later.
 	if not new_ranks.empty:
 		for algorithm in new_ranks:
 			#Get and store the plot coordinates.
-			x, y, hits, coords = get_bridge_coords(new_ranks[algorithm].values, ranks_range, n_rankings)
+			x, y, matches, coords = get_bridge_coords(new_ranks[algorithm].values, ranks_range, n_rankings)
 			all_coords[algorithm + ',x']=x
 			all_coords[algorithm + ',y']=y
 		all_coords.index=range(len(x))
@@ -326,7 +326,7 @@ def subplots(lib_pairs, all_libs, top_10):
 
 def hexbin_method_comparison(libs, m1, m2):
 	'''
-	Creates a grid of heatmaps comparing how two different methods rank the "hits", or "matches".
+	Creates a grid of heatmaps comparing how two different methods rank the "matches", or "matches".
 	libs : list-like
 		the gmt libraries to create heatmaps for
 	m1 : str
@@ -335,7 +335,7 @@ def hexbin_method_comparison(libs, m1, m2):
 		the second method, to correspond with the y-axis
 	'''
 	def get_coords(f1, f2):
-		'''Get the coordinates of the hits.'''
+		'''Get the coordinates of the matches.'''
 		#Store coordinates here.
 		coords_collection = []
 		#Open the two score files.
@@ -348,8 +348,8 @@ def hexbin_method_comparison(libs, m1, m2):
 		for column in s1: 
 			ordered_s1 = s1[column].sort_values().index
 			ordered_s2 = s2[column].sort_values().index
-			#Get the coordinates for each hit. 
-			###You can change == to != in order to view the hexbin for all the non-hits i.e. misses.###
+			#Get the coordinates for each match. 
+			###You can change == to != in order to view the hexbin for all the non-matches i.e. misses.###
 			these_coords = [(ordered_s1.get_loc(x) / s1len, ordered_s2.get_loc(x) / s2len) for 
 				x in ordered_s1 if clean(x) != clean(column)]
 			#Store them. 
