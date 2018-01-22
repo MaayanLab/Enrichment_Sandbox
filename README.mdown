@@ -31,15 +31,15 @@ These enrichment analysis algorithms have been implemented:
 
 Algorithms are evaluated by performing enrichment between pairs of libraries with similar annotations. This project supports both transcription factor libraries and drug libraries.  
 
-* Transcription factor libraries:
-	* [**ChEA**](https://www.ncbi.nlm.nih.gov/pubmed/20709693): infers transcription factor binding sites using ChIP-X experiment data manually collected from scientific publications.
-	* [**ENCODE**](https://www.encodeproject.org/): infers transcription factor binding sites using ChIP-seq experiments performed by the ENCODE project.
-	* [**CREEDS**](http://amp.pharm.mssm.edu/CREEDS/): infers single-gene perturbation signatures using microarray data extracted and processed from the Gene Expression Omnibus by crowdsource.
-* Drug libraries:
-	* [**DrugMatrix**](http://www.niehs.nih.gov/outage_maintenance/): toxicogenomic database whose web tool is currently down until further notice.
-	* [**DrugBank**](https://www.drugbank.ca/): encyclopedia-like database of drugs and their targets based on scientific publications.
-	* [**TargetCentral**](http://juniper.health.unm.edu/tcrd/): database from the "Illuminating the Druggable Genome" project, which is compiled from multiple sources and emphasizes GPCR, kinase, ion channel and nuclear receptor targets. 
-	* [**CREEDS**](http://amp.pharm.mssm.edu/CREEDS/): infers drug-gene associations using drug perturbation signatures extracted and processed from the Gene Expression Omnibus by crowdsource.
+* **Transcription factor libraries**:
+	* [ChEA](https://www.ncbi.nlm.nih.gov/pubmed/20709693): infers transcription factor binding sites using ChIP-X experiment data manually collected from scientific publications.
+	* [ENCODE](https://www.encodeproject.org/): infers transcription factor binding sites using ChIP-seq experiments performed by the ENCODE project.
+	* [CREEDS](http://amp.pharm.mssm.edu/CREEDS/): infers single-gene perturbation signatures using microarray data extracted and processed from the Gene Expression Omnibus by crowdsource.
+* **Drug libraries**:
+	* [DrugMatrix](http://www.niehs.nih.gov/outage_maintenance/): toxicogenomic database whose web tool is currently down until further notice.
+	* [DrugBank](https://www.drugbank.ca/): encyclopedia-like database of drugs and their targets based on scientific publications.
+	* [TargetCentral](http://juniper.health.unm.edu/tcrd/): database from the "Illuminating the Druggable Genome" project, which is compiled from multiple sources and emphasizes GPCR, kinase, ion channel and nuclear receptor targets. 
+	* [CREEDS](http://amp.pharm.mssm.edu/CREEDS/): infers drug-gene associations using drug perturbation signatures extracted and processed from the Gene Expression Omnibus by crowdsource.
 
 *Note: drug library compatibility is currently under construction.*
 
