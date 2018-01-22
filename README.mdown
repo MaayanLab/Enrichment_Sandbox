@@ -2,7 +2,7 @@
 
 Enrichment analysis algorithms identify known, annotated gene sets which are most similar to an input gene set. The input gene set might be a list of differentially-expressed genes from a biological experiment (e.g. treating a cancerous cell line with a drug, and identifying genes with the greatest change in expression levels using RNA-seq), while the annotations of the known gene sets might correspond to transcription factor binding sites identified by ChIP-seq, drug targets determined by perturbation signatures, or biological processes mined from scientific publications. By associating the annotations of the most similar known gene sets to the input gene set, a scientist can use enrichment analysis to learn about the biology of the input gene set. For the cancerous cell line example, this means answering questions like "What transcription factors might this drug have activated?", "What drugs have similar effects?", or "What regulatory pathways are playing a role here?".
 
-The primary purpose of this project is to evaluate new algorithms for enrichment analysis. It only considers algorithms whose input is a gene set, and not original gene expression data, and whose output is a ranking of the known annotations, from most to least enriched. It evaluates these algorithms by measuring their abilities to, when given an annotated gene set from one library, rank highly the "matching" annotations in a different library, e.g. those which refer to the same drug or transcription factor.
+The primary purpose of this project is to evaluate new algorithms for enrichment analysis. It only considers algorithms whose input is a gene set, and not gene expression data. It evaluates these algorithms by measuring their abilities to, when given an annotated gene set from one gene set library, return the "matching" annotations from a different gene set library, e.g. those which refer to the same drug, transcription factor, or biological process.
 
 Currently, the most-used algorithm for this form of enrichment analysis is the Fisher's exact test. While simple and effective, it considers each gene independently, and each annotation separately. Since we know biological phenomena interact with one another, there is theoretically much room for improvement.
 
@@ -12,17 +12,17 @@ Currently, the most-used algorithm for this form of enrichment analysis is the F
 
 These enrichment analysis algorithms have been implemented:
 
-* A control: returns a random ranking of the known gene sets.
-* Fisher's exact test: for each annotation, computes a p-value for overrepresentation. Then, ranks annotations by ascending p-value.
-* Binomial proportions test: variant of the Fisher's exact test.
-* Z score and Combined score from the [Enrichr](http://amp.pharm.mssm.edu/Enrichr/help#background&q=4) API
-* Gini Impurity and Entropy: for each annotation, use its gene set to split the set of all genes in the search library, and with the objective of separating out the genes in the input gene set, compute the gini impurity (a measure of misclassification error) or entropy (a measure of information gain) of the split. Then, rank annotations by ascending gini impurity or entropy.
-	* A pairwise variant of the Gini Impurity and Entropy: splits on each pair of annotations. Then, ranks annotations by a score which is a function of the gini impurity or entropy of the splits in which it occured.
-* Machine learning methods: build classifiers that predict whether genes in the search library also belong to the input gene set, and then use feature importances to rank the search library annotations.
-	* RandomForest, ExtraTrees, RandomTreesEmbedding, GradientBoosting and AdaBoost from sklearn.ensemble
-	* LinearSVC from sklearn.svm
-	* XGBoost from the DMLC
-	* Recursive variants of the above machine learning methods
+* **A control**: returns a random ranking of the known gene sets.
+* **Fisher's exact test**: for each annotation, computes a p-value for overrepresentation. Then, ranks annotations by ascending p-value.
+* **Binomial proportions test**: variant of the Fisher's exact test.
+* **Z score and Combined score**: from the [Enrichr](http://amp.pharm.mssm.edu/Enrichr/help#background&q=4) API.
+* **Gini Impurity and Entropy**: for each annotation, use its gene set to split the set of all genes in the search library, and with the objective of separating out the genes in the input gene set, compute the gini impurity (a measure of misclassification error) or entropy (a measure of information gain) of the split. Then, rank annotations by ascending gini impurity or entropy.
+	* **A pairwise variant of the Gini Impurity and Entropy**: splits on each pair of annotations. Then, ranks annotations by a score which is a function of the gini impurity or entropy of the splits in which it occured.
+* **Machine learning methods**: build classifiers that predict whether genes in the search library also belong to the input gene set, and then rank annotations by increasing feature importance.
+	* **RandomForest, ExtraTrees, RandomTreesEmbedding, GradientBoosting and AdaBoost** from sklearn.ensemble
+	* **LinearSVC** from sklearn.svm
+	* **XGBoost** from the DMLC
+	* **Recursive variants of the above machine learning methods**
 	* *Removed: Above machine learning methods, but using a classifier that predicts whether or not a gene set is enriched based on Fisher contingency table values and other metrics (e.g. Fisher p value, Gini impurity)*
 * Mixtures of the above algorithms, i.e. score averaging and iterative elimination.
 * *Removed: Fisher's exact test adjusted with gene-gene correlation data from ARCHS4* 
@@ -32,14 +32,14 @@ These enrichment analysis algorithms have been implemented:
 Algorithms are evaluated by performing enrichment between pairs of libraries with similar annotations. This project supports both transcription factor libraries and drug libraries.  
 
 * Transcription factor libraries:
-	* [ChEA](https://www.ncbi.nlm.nih.gov/pubmed/20709693): infers transcription factor binding sites using ChIP-X experiment data manually collected from scientific publications.
-	* [ENCODE](https://www.encodeproject.org/): infers transcription factor binding sites using ChIP-seq experiments performed by the ENCODE project.
-	* [CREEDS](http://amp.pharm.mssm.edu/CREEDS/): infers single-gene perturbation signatures using microarray data extracted and processed from the Gene Expression Omnibus by crowdsource.
+	* [**ChEA**](https://www.ncbi.nlm.nih.gov/pubmed/20709693): infers transcription factor binding sites using ChIP-X experiment data manually collected from scientific publications.
+	* [**ENCODE**](https://www.encodeproject.org/): infers transcription factor binding sites using ChIP-seq experiments performed by the ENCODE project.
+	* [**CREEDS**](http://amp.pharm.mssm.edu/CREEDS/): infers single-gene perturbation signatures using microarray data extracted and processed from the Gene Expression Omnibus by crowdsource.
 * Drug libraries:
-	* [DrugMatrix](http://www.niehs.nih.gov/outage_maintenance/): toxicogenomic database whose web tool is currently down until further notice.
-	* [DrugBank](https://www.drugbank.ca/): encyclopedia-like database of drugs and their targets based on scientific publications.
-	* [TargetCentral](http://juniper.health.unm.edu/tcrd/): database from the "Illuminating the Druggable Genome" project, which is compiled from multiple sources and emphasizes GPCR, kinase, ion channel and nuclear receptor targets. 
-	* [CREEDS](http://amp.pharm.mssm.edu/CREEDS/): infers drug-gene associations using drug perturbation signatures extracted and processed from the Gene Expression Omnibus by crowdsource.
+	* [**DrugMatrix**](http://www.niehs.nih.gov/outage_maintenance/): toxicogenomic database whose web tool is currently down until further notice.
+	* [**DrugBank**](https://www.drugbank.ca/): encyclopedia-like database of drugs and their targets based on scientific publications.
+	* [**TargetCentral**](http://juniper.health.unm.edu/tcrd/): database from the "Illuminating the Druggable Genome" project, which is compiled from multiple sources and emphasizes GPCR, kinase, ion channel and nuclear receptor targets. 
+	* [**CREEDS**](http://amp.pharm.mssm.edu/CREEDS/): infers drug-gene associations using drug perturbation signatures extracted and processed from the Gene Expression Omnibus by crowdsource.
 
 *Note: drug library compatibility is currently under construction.*
 
