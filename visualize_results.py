@@ -2,7 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from perform_enrichment import clean_tf, clean
+from perform_enrichment import clean
 from sklearn.metrics import auc
 from joblib import Parallel, delayed
 from collections import Counter

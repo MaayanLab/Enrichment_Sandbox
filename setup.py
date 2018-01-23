@@ -187,100 +187,26 @@ def combine_paired_gvm(input_fname, output_fname, merge_type='union'):
 		else: raise ValueError('invalid merge type: ' + merge_type)
 
 	new_gvm = new_gvm.replace(to_replace=False, value='')
-	new_gvm.index.name = 'DrugMatrix_Union'
-	new_gvm.to_csv('DrugMatrix_Union_gvm.csv',sep='\t')
-
-def get_interactionlist(fname):
-	if '_10-05-17.csv' in fname: 
-		interactions = pd.read_csv(fname, sep=',', encoding='latin1')
-		interactions = interactions[['TargetGeneSymbol_Entrez','DrugName']]
-
-	elif fname == 'interactions.tsv':
-		interactions = pd.read_csv(fname, sep='\t', encoding='latin1')
-		interactions.loc[interactions['gene_name'].isnull().values, 'gene_name'] = interactions.loc[
-			interactions['gene_name'].isnull().values, 'gene_claim_name']
-		interactions = interactions[['gene_name','drug_claim_primary_name']]
-
-	elif fname == 'repurposing_drugs_20170327.txt':
-		f = pd.read_csv(fname,sep='\t',skiprows=9,encoding='latin1')
-		f = f.loc[~f['target'].isnull().values,]
-		interactions = []
-		for row in f.index:
-			geneset = f.at[row,'target'].split('|')
-			interactions = interactions + [np.column_stack([geneset,[f.at[row,'pert_iname']] * len(geneset)])]
-		interactions = pd.DataFrame(np.vstack(interactions))
-
-	interactions.columns = ('gene','annotation')
-	interactions = interactions.loc[~interactions['gene'].isnull().values,]
-	interactions = interactions.loc[~interactions['annotation'].isnull().values,]
-	interactions = interactions.drop_duplicates()
-	return interactions
-
-def interactionlist_to_gvm(interactionlist_fname):
-	#Check if this has already been done. 
-	output_fname = interactionlist_fname.partition('.')[0]+ '_gvm.csv'
-	if os.path.isfile(output_fname): 
-		print(output_fname, 'already created.')
-		return
-
-	#Otherwise, proceed.
-	print(interactionlist_fname)
-	interactionlist = get_interactionlist(interactionlist_fname)
-
-	#The first segment of this list, ending at 'nan', comes from pandas.read_csv(na_values) documentation.
-		#From the original list, 'NA' was removed because it is, in fact, a gene. 
-	#The second segment of this list, beginning with '---', was added according to my own observations.
-	MY_NA_VALS = {'', '#N/A', '#N/A N/A', '#NA', '-1.#IND', '-1.#QNAN',
-		'-NaN', '-nan', '1.#IND', '1.#QNAN', 'N/A', 'NULL', 'NaN', 'nan', 
-		'---', '[NULL]'}
-
-	#Initialize the gvm with annotations as indices.
-	gvm = pd.DataFrame(index=set(interactionlist['annotation']), dtype=bool)
-	#For each gene:
-	##(I think this is faster than iterating over annotations because there are less unique genes than annots.)
-	genes = set(interactionlist['gene'])
-	for gene in genes:
-		print(gene)
-		#Get this gene's annotation vector: the collection of annotations with this gene in their set.
-		annotations = interactionlist.loc[interactionlist['gene'] == gene, 'annotation'].values
-		#annotations = set(annotations)
-		#Add this annotation vector to the gvm.
-		vec = pd.DataFrame(True, index=annotations, columns=[gene], dtype=bool)
-		gvm = pd.concat([gvm,vec], axis=1)
-	#Transpose such that genes are indices and annotations are columns.
-	gvm = gvm.transpose()
-
-	#Save the results.
-	gvm.to_csv(output_fname, sep='\t')
-	return
+	new_gvm.index.name = output_fname.partition('_gvm')[0]
+	new_gvm.to_csv(output_fname,sep='\t')
 
 if __name__ == '__main__':
 
 	os.chdir('libs')
 
-	#Get ChEA, DrugMatrix, and ENCODE gvms.
-	gmts = ('ChEA_2016.txt','DrugMatrix.txt','ENCODE_TF_ChIP-seq_2015.txt')
+	#Convert all transcription factor gmts to gvms.
+	gmts = (
+		'ChEA_2016.txt',
+		'ENCODE_TF_ChIP-seq_2015.txt',
+		'Single_Gene_Perturbations_from_GEO_down.txt',
+		'Single_Gene_Perturbations_from_GEO_up.txt')
 	Parallel(n_jobs=3, verbose=0)(delayed(convert_gmt)(gmt, 'gvm') for gmt in gmts)
-	combine_paired_gvm('DrugMatrix_gvm.csv', 'DrugMatrix_Union_gvm.csv', merge_type='union')
-
-	#Get CREEDS_tfs and CREEDS_drugs gvms by taking the union of the up and down gene sets.
+	#Get the CREEDS_tfs gvm by taking the union of CREEDS' up and down gene sets.
 	combine_gmts(['Single_Gene_Perturbations_from_GEO_down.txt', 'Single_Gene_Perturbations_from_GEO_up.txt'], 
-		'CREEDS_tfs_gvm.csv')
-	combine_gmts(['Drug_Perturbations_from_GEO_down.txt', 'Drug_Perturbations_from_GEO_up.txt'], 
-		'CREEDS_drugs_gvm.csv')
+		'CREEDS_TFs_gvm.csv')
 
-	#Optional: also get the gvms of the CREEDS up and down gene sets themselves. 
-	gmts = ('Single_Gene_Perturbations_from_GEO_down.txt','Single_Gene_Perturbations_from_GEO_up.txt',
-		'Drug_Perturbations_from_GEO_down.txt', 'Drug_Perturbations_from_GEO_up.txt')
-	Parallel(n_jobs=3, verbose=0)(delayed(convert_gmt)(gmt, 'gvm') for gmt in gmts)
-
-	#Get DrugBank, TargetCentral, their union, their intersection, DGIdb, and Drug Rep. Hub gvms.
-	interactionlists = ('1_DrugBank_EdgeList_10-05-17.csv', 
-		'2_TargetCentral_EdgeList_10-05-17.csv',
-		'3_EdgeLists_Union_10-05-17.csv', 
-		'4_EdgeLists_Intersection_10-05-17.csv',
-		'interactions.tsv',
-		'repurposing_drugs_20170327.txt')
-	Parallel(n_jobs=3, verbose=0)(delayed(interactionlist_to_gvm)(ilist) for ilist in interactionlists)
+	#NOTE: Drug library gvms must be downloaded from [LINK], or obtained from
+	#the DrugLib_Enrichment_Comparison repo at https://github.com/MaayanLab/DrugLib_Enrichment_Comparison/ .
+	#These should be manually saved into the \libs folder. 
 
 	os.chdir('..')
