@@ -12,7 +12,7 @@ Currently, the most-used algorithm for this form of enrichment analysis is the F
 
 These enrichment analysis algorithms have been implemented:
 
-* **A control**: returns a random ranking of the known gene sets.
+* **A control**: returns a random ranking of the annotations.
 * **Fisher's exact test**: for each annotation, computes a p-value for overrepresentation. Then, ranks annotations by ascending p-value.
 * **Binomial proportions test**: variant of the Fisher's exact test.
 * **Z score and Combined score**: from the [Enrichr](http://amp.pharm.mssm.edu/Enrichr/help#background&q=4) API.
@@ -24,12 +24,12 @@ These enrichment analysis algorithms have been implemented:
 	* **XGBoost** from the DMLC
 	* **Recursive variants of the above machine learning methods**
 	* *Removed: Above machine learning methods, but using a classifier that predicts whether or not a gene set is enriched based on Fisher contingency table values and other metrics (e.g. Fisher p value, Gini impurity)*
-* Mixtures of the above algorithms, i.e. score averaging and iterative elimination.
+* **Mixtures** of the above algorithms, i.e. score averaging and iterative elimination.
 * *Removed: Fisher's exact test adjusted with gene-gene correlation data from ARCHS4* 
 
 ## Libraries
 
-Algorithms are evaluated by performing enrichment between pairs of libraries with similar annotations. This project supports both transcription factor libraries and drug libraries.  
+This project supports two types of gene set libraries.  
 
 * **Transcription factor libraries**:
 	* [ChEA](https://www.ncbi.nlm.nih.gov/pubmed/20709693): infers transcription factor binding sites using ChIP-X experiment data manually collected from scientific publications.
@@ -43,11 +43,11 @@ Algorithms are evaluated by performing enrichment between pairs of libraries wit
 
 *Note: drug library compatibility is currently under construction.*
 
-## Description of benchmarking process
+## How the algorithms are evaluated
 
-The benchmarking process is as follows: Two libraries whose gene sets have similar annotations are chosen. (Either both have transcription factor annotations, or both have drug annotations.) One is designated as the `input library`, and the other is designated as the `search library`. Annotations in the `input library` whose corresponding transcription factor or drug also corresponds to at least one annotation in the `search library` are identified. Then, one at a time, the gene sets of these common annotations from the `input library` are used to perform enrichment into all of the `search library`. For each input gene set, the enrichment algorithm will return a ranking of all annotations in the `search library`, from most enriched to least enriched. Since the input and search libraries should agree with one another, the `search library` annotations corresponding to the same transcription factor (or drug) as the input annotation should appear toward the top of the rankings. Therefore, a good algorithm will consistently rank these matching annotations highly, while a bad algorithm will not. "Bridge plots," explained below, are used to qualitatively evaulate this.
+Algorithms are evaluated using a benchmarking process: First, two libraries whose gene sets have similar annotations are chosen. (Either both have transcription factor annotations, or both have drug annotations.) One is designated as the `input library`, and the other is designated as the `search library`. Annotations in the `input library` whose corresponding transcription factor or drug also corresponds to at least one annotation in the `search library` are identified. Then, one at a time, the gene sets of these common annotations from the `input library` are used to perform enrichment into all of the `search library`. For each input gene set, the enrichment algorithm will return a ranking of all annotations in the `search library`, from most enriched to least enriched. Since the input and search libraries should agree with one another, the `search library` annotations corresponding to the same transcription factor or drug as the input annotation should appear toward the top of the rankings. In other words, a good algorithm will consistently rank these matching annotations highly, while a bad algorithm will not. "Bridge plots," explained below, are used to qualitatively evaulate this.
 
-Because the libraries are derived differently (e.g. transcription factor-to-gene libraries might be derived from experimental ChIP-seq data, or from ChIP-seq data mined from publications, or from microarray data), a secondary purpose of this project is to measure the agreement between the libraries. If two libraries agree with one another, then their gene sets for matching annotations should be unusually similar, so enrichment algorithms should be able to consistently assign high ranks to matches. Theoretically, all libraries of the same type should have some agreement, and libraries which use the same or similar techniques to obtain the gene sets should have even more agreement.
+Because the libraries are derived differently (e.g. transcription factor-to-gene libraries might be derived from experimental ChIP-seq data, or from ChIP-seq data mined from publications, or from microarray data), a secondary purpose of this project is to use enrichment analysis to measure the agreement between the libraries. If two libraries agree with one another, then their gene sets for matching annotations should be unusually similar, so enrichment algorithms should be able to consistently perform well. Theoretically, all libraries of the same type should have some agreement, and libraries which use the same or similar techniques to obtain the gene sets should have even more agreement.
 
 ## Visualizing the results
 
@@ -72,7 +72,7 @@ In the above example, the Fisher's exact test clearly outperforms the RandomFore
 These plots are available: 
 
 * All bridge plots for a single library pair, comparing the rankings of different algorithms.
-* A combined plot showing all bridge plots for all library pairs.
+* A combined plot, showing all bridge plots for all library pairs of a certain type (transcription factor or drug).
 * An array of bridge plots, with each library pair in its own subplot.
 * An array of hexbin plots, with each library pair in its own subplot.
 	* These are useful for comparing how two different algorithms rank the same terms.
