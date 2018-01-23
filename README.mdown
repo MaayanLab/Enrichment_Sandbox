@@ -96,9 +96,12 @@ The bridge plots can be zoomed-in to view only the top ranks, and filtered to vi
 
 1. Clone this repo. 
 2. Download all the gene vector matrices from [LINK]. Place these in the \libs folder. (ChEA, CREEDS_TFs and ENCODE have been pre-downloaded in this repo for convenience, so this step can be skipped if only these libraries are being used.)
-* Alternatively, run `setup.py`. This will convert the transcription factor gmts to gvms, and save them in the \libs folder. Then, follow the directions in [the DrugLib_Enrichment_Comparison repo](https://github.com/MaayanLab/DrugLib_Enrichment_Comparison/) to obtain the drug library gvms, which will end in the suffix "\_gvm2.csv" and be located in either the \original_drug-gene_libs or \expanded_drug-gene_libs folders. For each of these files, rename the suffix to "\_gvm.csv" and copy it into the \libs folder of \Enrichment_Sandbox.
-4. `perform_enrichment.py` has a function called `get_algorithms()`. In here, fill a data.frame with functions and parameters from `enrichment_functions.py` which you want to use. Also, choose which libraries you want to use. Then, run `perform_enrichment.py` to obtain scores for each algorithm, for each library pair. 
-5. Run `evaluate_results.py` to obtain the rankings of the matching annotations, and to visualize the results.
+	* Alternatively, if you want to generate the gvms for yourself, follow these steps:
+		* Delete the pre-downloaded gvms in \libs and run `setup.py`. This script will convert the transcription factor gmts to gvms, and save them in the \libs folder. 
+		* Follow the instructions in [the DrugLib_Enrichment_Comparison repo](https://github.com/MaayanLab/DrugLib_Enrichment_Comparison/) to obtain the drug library gvms. The ones that you want end in the suffix "\_gvm2.csv" and are located in either the \original_drug-gene_libs or \expanded_drug-gene_libs folders. For each of these files, rename the suffix to "\_gvm.csv" and copy it into the \libs folder of the cloned \Enrichment_Sandbox repo.
+3. Open `perform_enrichment.py`. Follow the instructions in the prompts to choose which algorithms and libraries to use. Then, run this script. 
+5. Open `evaluate_results.py`. Follow the instructions in the prompts to choose how to view the results. Then, run this script.
+
 * `fix.py` can be used to make adjustments such as renaming algorithms, resetting the results files, and modifying scores.
 * `log.py` is a log of experiments I've personally done, for my own reference. 
 

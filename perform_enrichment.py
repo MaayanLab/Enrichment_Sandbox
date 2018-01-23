@@ -98,6 +98,7 @@ def get_enrichment_algorithms(ilib_gvm, ilib_name, slib_gvm, slib_name):
 	##Create a classifier - only necessary for ML_fisher_features (REMOVED).
 	##Otherwise, comment out. 
 	#classifier = get_classifiers(ilib_name, slib_name)
+	#==================================================
 
 	#======================================================================================================================
 	#This is where you specify which enrichment methods to run.
