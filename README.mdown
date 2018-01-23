@@ -95,7 +95,7 @@ The bridge plots can be zoomed-in to view only the top ranks, and filtered to vi
 # How to Use:
 
 1. Clone this repo. 
-2. Download all the gene vector matrices from [this Google Drive folder](https://drive.google.com/file/d/1GV4A5ivxoO4UHPRUU2CFmhN89qGC8Vmg/view?usp=sharing). Place these in the \libs folder. (ChEA, CREEDS_TFs and ENCODE have been pre-downloaded in this repo for convenience, so this step can be skipped if only these libraries are being used.)
+2. Download all the gene vector matrices from [this Google Drive folder](https://drive.google.com/drive/folders/1C0ySbtBUA23xnIoyG2sq-MUVgZ2p257H?usp=sharing). Place these in the \libs folder. (ChEA, CREEDS_TFs and ENCODE have been pre-downloaded in this repo for convenience, so this step can be skipped if only these libraries are being used.)
 	* Alternatively, if you want to generate the gvms for yourself, follow these steps:
 		* Delete the pre-downloaded gvms in \libs and run `setup.py`. This script will convert the transcription factor gmts to gvms, and save them in the \libs folder. 
 		* Follow the instructions in [the DrugLib_Enrichment_Comparison repo](https://github.com/MaayanLab/DrugLib_Enrichment_Comparison/) to obtain the drug library gvms. The ones that you want end in the suffix "\_gvm2.csv" and are located in either the \original_drug-gene_libs or \expanded_drug-gene_libs folders. For each of these files, rename the suffix to "\_gvm.csv" and copy it into the \libs folder of the cloned \Enrichment_Sandbox repo.
