@@ -125,6 +125,9 @@ def enrichment(pair):
 	ilib_name, slib_name = (fname.rpartition('\\')[2].partition('_gvm')[0] for fname in pair)
 	prefix = 'input_' + ilib_name + '_into_' + slib_name
 
+	script_dir = os.path.dirname(os.path.abspath(__file__))
+	results_dir = os.path.join(script_dir, 'results\\')
+
 	#==============================================================================================================
 	#OPTIONAL: To speedily allow this script to continue working from where it left off when it was previously run,
 	#	specify ALL the enrichment algorithm names again here.
@@ -135,7 +138,7 @@ def enrichment(pair):
 	#Exit if enrichment between this library pair has already been done.
 	#See above chunk: `algorithm_names` must be specified.
 	if algorithm_names is not None:
-		output_fnames = tuple(prefix + '_' + name + '.csv' for name in algorithm_names)
+		output_fnames = tuple(results_dir + prefix + '_' + name + '.csv' for name in algorithm_names)
 		if all((os.path.isfile(fname) for fname in output_fnames)):
 			print('Already done enrichment for', prefix)
 			return
@@ -158,9 +161,6 @@ def enrichment(pair):
 	for algorithm_name in enrichment_algorithms:
 		algorithm = enrichment_algorithms[algorithm_name]
 
-		#Ge the output file name(s).
-		script_dir = os.path.dirname(os.path.abspath(__file__))
-		results_dir = os.path.join(script_dir, 'results\\')
 		#Some methods actually return multiple results. These will need multiple score files.
 		if algorithm_name == 'ZAndCombined': output_fnames = (
 			results_dir + prefix + '_Z.csv', 
