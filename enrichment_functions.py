@@ -40,12 +40,17 @@ def Fisher(input_geneset, slib_gvm):
 	pvals = pd.Series(index=slib_gvm.columns)
 	input_geneset = set(input_geneset)
 	for annot in slib_gvm:
-		annot_geneset = set(slib_gvm.index[slib_gvm[annot]])
+		if type(slib_gvm) == pd.core.sparse.frame.SparseDataFrame: 
+			vec = slib_gvm[annot].to_dense()
+		else: vec = slib_gvm[annot]
+		annot_geneset = set(slib_gvm.index[vec])
+
 		a = len(annot_geneset & input_geneset)
 		b = len(annot_geneset) - a
 		c = len(input_geneset) - a
 		d = 20000 - a - b - c
-		o,pvals[annot] =  stats.fisher_exact([[a,b],[c,d]], alternative='greater')
+		if d < 0: o,pvals[annot] = [None, 0]
+		else: o,pvals[annot] =  stats.fisher_exact([[a,b],[c,d]], alternative='greater')
 	return(tuple(pvals))
 
 def BinomialProportions(input_geneset, slib_gvm):
