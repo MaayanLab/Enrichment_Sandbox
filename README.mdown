@@ -46,7 +46,7 @@ This project supports two types of gene set libraries.
 	* [CREEDS](amp.pharm.mssm.edu/CREEDS/): human, mouse and rat drug perturbation signatures extracted from the Gene Expression Omnibus by crowdsource
 	* [LINCS](lincsproject.org/): gene expression profiles from flow cytometry experiments with different perturbagens, time points, doses, and cell lines	
 
-The average gene set sizes for annotations from all the drug target libraries (i.e. all drug libraries except CREEDS and LINCS) are small. Therefore, these drug libraries were expanded using PPI data from ARCHS4, BioGRID, and hu.MAP, resulting in three new, expanded libraries for each original library. See [the writeup for the DrugLib_Enrichment_Comparison project](http://htmlpreview.github.io/?https://github.com/MaayanLab/DrugLib_Enrichment_Comparison/blob/master/writeup.html) for a full explanation of how these libraries were expanded. 
+The average gene set sizes for annotations from all the drug target libraries (i.e. all drug libraries except CREEDS and LINCS) are small. Therefore, these drug libraries were expanded using PPI data from BioGRID or hu.MAP, or coexpression data from ARCHS4. This resulted in three new, expanded libraries for each original library. See [the writeup for the DrugLib_Enrichment_Comparison project](http://htmlpreview.github.io/?https://github.com/MaayanLab/DrugLib_Enrichment_Comparison/blob/master/writeup.html) for a full explanation of how these libraries were expanded. 
 
 ## How the algorithms are evaluated
 
@@ -96,7 +96,7 @@ The bridge plots can be zoomed-in to view only the top ranks, and filtered to vi
 # How to Use:
 
 1. Clone this repository to your computer. 
-2. The enrichment analysis code works on gene vector matrices (gvms). The ChEA, CREEDS_TFs_union, and ENCODE libraries have all been pre-downloaded to the repo in this format. If you would like to use drug libraries, their gvms can be downloaded from [this zip file](https://drive.google.com/file/d/1RZVz7W-MuikJbX0IlJvQwbuMsBjtYD5k/view?usp=sharing). If you would like to use your own libraries, the scripts in `convert_files_scripts.py` might be able to help. For example, it can convert gmt files to gvms. `convert_files.py` shows how these scripts were used to obtain gvms for the transcription factor libraries from their original gmt files. 
+2. The enrichment analysis code works on gene vector matrices (gvms). These should be placed in the `gvms` subfolder. The transcription factor libraries have all been pre-downloaded to the repo in this format. If you would like to use the drug libraries, their gvms can be downloaded from [this zip file](https://drive.google.com/file/d/1RZVz7W-MuikJbX0IlJvQwbuMsBjtYD5k/view?usp=sharing). If you would like to use your own libraries, the scripts in `convert_files_scripts.py` might be able to help. For example, it can convert gmt files to gvms. `convert_files.py` shows how these scripts were used to obtain gvms for the transcription factor libraries from their original gmt files. 
 3. Open `perform_enrichment.py`. Follow the instructions in the prompts to choose which algorithms and libraries to use. Then, run this script. 
 5. Open `visualize_results.py`. Follow the instructions in the prompts to choose how to view the results. Then, run this script.
 
