@@ -171,14 +171,7 @@ if __name__ == '__main__':
 	gvm_fnames = ['gvms//' + fname for fname in os.listdir('gvms') if 'gvm.' in fname]
 	gvm_fnames = gvm_fnames + ['gvms//expanded//' + fname for fname in os.listdir('gvms//expanded') 
 		if 'gvm.' in fname]
-
-	target_libs = [fname for fname in gvm_fnames if ('CREEDS' not in fname and 'LINCS' not in fname)]
-	perturb_libs = [fname for fname in gvm_fnames if ('CREEDS' in fname or 'LINCS' in fname)]
-
-	#We will iterate over each (target, perturb) and (perturb, target) pair.
-	fwd_pairs = [(target,perturb) for target in target_libs for perturb in perturb_libs]
-	bck_pairs = [(perturb,target) for target in target_libs for perturb in perturb_libs]
-	lib_pairs = fwd_pairs + bck_pairs
+	lib_pairs = [(a,b) for a in gvm_fnames for b in gvm_fnames if a != b]
 	#========================================================================================
 
 	if not os.path.isdir('results'): os.makedirs('results')

@@ -34,18 +34,19 @@ This project supports two types of gene set libraries.
 * **Transcription factor libraries**:
 	* [ChEA](https://www.ncbi.nlm.nih.gov/pubmed/20709693): infers transcription factor binding sites using ChIP-X experiment data manually collected from scientific publications.
 	* [ENCODE](https://www.encodeproject.org/): infers transcription factor binding sites using ChIP-seq experiments performed by the ENCODE project.
-	* [CREEDS](http://amp.pharm.mssm.edu/CREEDS/): infers single-gene perturbation signatures using microarray data extracted and processed from the Gene Expression Omnibus by crowdsource.
+	* [CREEDS](http://amp.pharm.mssm.edu/CREEDS/): infers single-gene perturbation signatures using microarray data extracted from the Gene Expression Omnibus by crowdsource.
 * **Drug libraries**:
 	* [DrugBank](drugbank.ca/): encyclopedia-like drug database compiled from scientific publications
-	* [Target Central Resource Database ("TargetCentral")](juniper.health.unm.edu/tcrd/): the central resource behind the "Illuminating the Druggable Genome" project, which compiles data from multiple sources and emphasizes GPCR, kinase, ion channel and nuclear receptor targets
-	* [CREEDS](amp.pharm.mssm.edu/CREEDS/): infers drug-gene associations using drug perturbation signatures extracted and processed from the Gene Expression Omnibus by crowdsource.
-	* [DrugMatrix](www.niehs.nih.gov/outage_maintenance/): drug and environmental chemical database compiled from toxicogenomic studies. The web tool is currently down until further notice
-	* [DGIdb](dgidb.org/): drug-gene interactions compiled by curation and text-mining from multiple sources
+	* [Target Central Resource Database ("TargetCentral")](juniper.health.unm.edu/tcrd/): part of the "Illuminating the Druggable Genome" project, which compiles data from multiple sources and emphasizes GPCR, kinase, ion channel and nuclear receptor targets
+	* [Drug Gene Interaction Database](dgidb.org/): drug-gene interactions compiled by curation and text-mining from multiple sources
 	* [Drug Repurposing Hub ("DrugRepHub")](clue.io/repurposing) drug screening library containing known clinical drugs and their targets as reported by scientific publications
+	* [Drug Central](drugcentral.org/) database of drugs approved or regulated by government agencies
+	* [Drug Target Commons](drugtargetcommons.fimm.fi/) drug bioactivity database extracted and organized from multiple sources by crowdsource	
+	* [STITCH](stitch.embl.de/) chemical-protein interaction network obtained from computational predictions, inter-organism knowledge, and other databases
+	* [CREEDS](amp.pharm.mssm.edu/CREEDS/): human, mouse and rat drug perturbation signatures extracted from the Gene Expression Omnibus by crowdsource
+	* [LINCS](lincsproject.org/): gene expression profiles from flow cytometry experiments with different perturbagens, time points, doses, and cell lines	
 
-The average gene set sizes for annotations from DrugBank, TargetCentral, DGIdb, and DrugRepHub are small (2-4 genes per gene set on average). Therefore, these drug libraries were expanded using PPI data from ARCHS4, BioGRID, and hu.MAP, resulting in three new, expanded libraries for each original library. See [the description for the DrugLib_Enrichment_Comparison repo](http://htmlpreview.github.io/?https://github.com/MaayanLab/DrugLib_Enrichment_Comparison/blob/master/project_description_and_setup.html) for a full explanation of how these libraries were expanded. 
-
-*Note: drug library compatibility is currently under construction.*
+The average gene set sizes for annotations from all the drug target libraries (i.e. all drug libraries except CREEDS and LINCS) are small. Therefore, these drug libraries were expanded using PPI data from ARCHS4, BioGRID, and hu.MAP, resulting in three new, expanded libraries for each original library. See [the writeup for the DrugLib_Enrichment_Comparison project](http://htmlpreview.github.io/?https://github.com/MaayanLab/DrugLib_Enrichment_Comparison/blob/master/writeup.html) for a full explanation of how these libraries were expanded. 
 
 ## How the algorithms are evaluated
 
@@ -94,18 +95,15 @@ The bridge plots can be zoomed-in to view only the top ranks, and filtered to vi
 
 # How to Use:
 
-1. Clone this repo. 
-2. Download all the gene vector matrices from [this Google Drive folder](https://drive.google.com/drive/folders/1C0ySbtBUA23xnIoyG2sq-MUVgZ2p257H?usp=sharing). Place these in the \libs folder. (ChEA, CREEDS_TFs and ENCODE have been pre-downloaded in this repo for convenience, so this step can be skipped if only these libraries are being used.)
-	* Alternatively, if you want to generate the gvms for yourself, follow these steps:
-		* Delete the pre-downloaded gvms in \libs and run `setup.py`. This script will convert the transcription factor gmts to gvms, and save them in the \libs folder. 
-		* Follow the instructions in [the DrugLib_Enrichment_Comparison repo](https://github.com/MaayanLab/DrugLib_Enrichment_Comparison/) to obtain the drug library gvms. The ones that you want end in the suffix "\_gvm2.csv" and are located in either the \original_drug-gene_libs or \expanded_drug-gene_libs folders. For each of these files, rename the suffix to "\_gvm.csv" and copy it into the \libs folder of the cloned \Enrichment_Sandbox repo.
+1. Clone this repository to your computer. 
+2. The enrichment analysis code works on gene vector matrices (gvms). The ChEA, CREEDS_TFs_union, and ENCODE libraries have all been pre-downloaded to the repo in this format. If you would like to use drug libraries, their gvms can be downloaded from [this zip file](https://drive.google.com/file/d/1RZVz7W-MuikJbX0IlJvQwbuMsBjtYD5k/view?usp=sharing). If you would like to use your own libraries, the scripts in `convert_files_scripts.py` might be able to help. For example, it can convert gmt files to gvms. `convert_files.py` shows how these scripts were used to obtain gvms for the transcription factor libraries from their original gmt files. 
 3. Open `perform_enrichment.py`. Follow the instructions in the prompts to choose which algorithms and libraries to use. Then, run this script. 
-5. Open `evaluate_results.py`. Follow the instructions in the prompts to choose how to view the results. Then, run this script.
+5. Open `visualize_results.py`. Follow the instructions in the prompts to choose how to view the results. Then, run this script.
 
 * `fix.py` can be used to make adjustments such as renaming algorithms, resetting the results files, and modifying scores.
 * `log.py` is a log of experiments I've personally done, for my own reference. 
 
-Scripts I have used previously are in the `old scripts` folder. They worked with an older version and probably do not work now:
+Scripts I have used previously are in the `old` folder. They worked with an older version and probably do not work now:
 * `get_pairwise_fisher_pvals.py` and `analyze_pairwise_fisher_pvals.py` were used to perform and explore the results of pairwise enrichment analysis (evaluating the degree of enrichment of a pair of terms at a time, instead of a single term) using the Fisher's exact test.
 * `create_abridged_libs.py` made a new gvm which has only the first n terms of another file. This was used to quickly test out enrichment algorithms that take a long time to run, such as the pairwise algorithms.
 * `edgelist_to_gmt.py` was used to create gmts from drug library edgelists.
@@ -113,13 +111,11 @@ Scripts I have used previously are in the `old scripts` folder. They worked with
 * `get_classifiers.py` was a helper function needed if a `ML_Fisher_features` method is used. 
 * `get_fisher_adjusted_vars.py` was used to get and view the correlation data for the adjusted Fisher's test.
 
-*Note: drug library compatibility is currently under construction.*
-
 # Code details:
 
 ## Description of pipeline
 
-1. **`setup.py`**
+1. **`convert_files.py`**
 * The gmt files are transformed into gene vector matrices (gvms), with column labels being annotations and row labels being genes. Each column is a boolean vector corresponding to a gene set.
 
 2. **`perform_enrichment.py`**
@@ -132,9 +128,9 @@ Scripts I have used previously are in the `old scripts` folder. They worked with
 			* Save this output as a column in a dataframe. 
 		* The final dataframe is stored as a `.csv` file. (Columns: common input library annotations. Indices: search library annotations. Cell values: scores given by the enrichment method. Title of file: "input_", input library, "_into_", search library, ".csv".)
 
-3. **`evaluate_results.py`**
+3. **`visualize_results.py`**
 * For each `(input, search)` pair of gmt libraries:
-	* The results files created by `get_scores.py` are loaded.
+	* The results files created by `perform_enrichment.py` are loaded.
 	* For each result file (i.e., for each algorithm):
 		* For each column (i.e., for each common input library annotation):
 			* The ranks for annotations which correspond to the same transcription factor or drug as the input gene set annotation are aggregated.
@@ -162,6 +158,4 @@ Scripts I have used previously are in the `old scripts` folder. They worked with
 
 # Future Directions
 
-* Enable use of drug libraries by identifying drug synonyms to make annotations from different libraries compatible
-* Merge code changes from DrugLib Enrichment Comparison project
 * Continue algorithm development
