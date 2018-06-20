@@ -36,15 +36,15 @@ This project supports two types of gene set libraries.
 	* [ENCODE](https://www.encodeproject.org/): infers transcription factor binding sites using ChIP-seq experiments performed by the ENCODE project.
 	* [CREEDS](http://amp.pharm.mssm.edu/CREEDS/): infers single-gene perturbation signatures using microarray data extracted from the Gene Expression Omnibus by crowdsource.
 * **Drug libraries**:
-	* [DrugBank](drugbank.ca/): encyclopedia-like drug database compiled from scientific publications
-	* [Target Central Resource Database ("TargetCentral")](juniper.health.unm.edu/tcrd/): part of the "Illuminating the Druggable Genome" project, which compiles data from multiple sources and emphasizes GPCR, kinase, ion channel and nuclear receptor targets
-	* [Drug Gene Interaction Database](dgidb.org/): drug-gene interactions compiled by curation and text-mining from multiple sources
-	* [Drug Repurposing Hub ("DrugRepHub")](clue.io/repurposing) drug screening library containing known clinical drugs and their targets as reported by scientific publications
-	* [Drug Central](drugcentral.org/) database of drugs approved or regulated by government agencies
-	* [Drug Target Commons](drugtargetcommons.fimm.fi/) drug bioactivity database extracted and organized from multiple sources by crowdsource	
-	* [STITCH](stitch.embl.de/) chemical-protein interaction network obtained from computational predictions, inter-organism knowledge, and other databases
-	* [CREEDS](amp.pharm.mssm.edu/CREEDS/): human, mouse and rat drug perturbation signatures extracted from the Gene Expression Omnibus by crowdsource
-	* [LINCS](lincsproject.org/): gene expression profiles from flow cytometry experiments with different perturbagens, time points, doses, and cell lines	
+	* [DrugBank](https://www.drugbank.ca/): encyclopedia-like drug database compiled from scientific publications
+	* [Target Central Resource Database ("TargetCentral")](http://juniper.health.unm.edu/tcrd/): part of the "Illuminating the Druggable Genome" project, which compiles data from multiple sources and emphasizes GPCR, kinase, ion channel and nuclear receptor targets
+	* [Drug Gene Interaction Database](https://www.dgidb.org/): drug-gene interactions compiled by curation and text-mining from multiple sources
+	* [Drug Repurposing Hub ("DrugRepHub")](https://clue.io/repurposing) drug screening library containing known clinical drugs and their targets as reported by scientific publications
+	* [Drug Central](http://drugcentral.org/) database of drugs approved or regulated by government agencies
+	* [Drug Target Commons](https://drugtargetcommons.fimm.fi/) drug bioactivity database extracted and organized from multiple sources by crowdsource	
+	* [STITCH](http://stitch.embl.de/) chemical-protein interaction network obtained from computational predictions, inter-organism knowledge, and other databases
+	* [CREEDS](http://amp.pharm.mssm.edu/CREEDS/): human, mouse and rat drug perturbation signatures extracted from the Gene Expression Omnibus by crowdsource
+	* [LINCS](http://www.lincsproject.org/): gene expression profiles from flow cytometry experiments with different perturbagens, time points, doses, and cell lines	
 
 The average gene set sizes for annotations from all the drug target libraries (i.e. all drug libraries except CREEDS and LINCS) are small. Therefore, these drug libraries were expanded using PPI data from BioGRID or hu.MAP, or coexpression data from ARCHS4. This resulted in three new, expanded libraries for each original library. See [the writeup for the DrugLib_Enrichment_Comparison project](http://htmlpreview.github.io/?https://github.com/MaayanLab/DrugLib_Enrichment_Comparison/blob/master/writeup.html) for a full explanation of how these libraries were expanded. 
 
